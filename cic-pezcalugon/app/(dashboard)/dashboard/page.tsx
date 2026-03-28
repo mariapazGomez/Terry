@@ -1,28 +1,44 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { logout } from "@/modules/auth/actions";
-
-export default async function DashboardPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
+export default function DashboardPage() {
   return (
-    <main className="p-6 space-y-4">
-      <h1 className="text-xl font-semibold">Dashboard</h1>
-      <p>Sesión iniciada como: {user.email}</p>
+    <div className="space-y-6">
+      <section>
+        <h2 className="text-2xl font-semibold">Resumen general</h2>
+        <p className="text-sm text-gray-500">
+          Vista inicial del estado financiero del emprendimiento.
+        </p>
+      </section>
 
-      <form action={logout}>
-        <button className="border px-3 py-2 rounded-md">
-          Cerrar sesión
-        </button>
-      </form>
-    </main>
+      <section className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-xl border p-4">
+          <p className="text-sm text-gray-500">Ingresos del mes</p>
+          <p className="mt-2 text-2xl font-bold">$0</p>
+        </div>
+
+        <div className="rounded-xl border p-4">
+          <p className="text-sm text-gray-500">Gastos del mes</p>
+          <p className="mt-2 text-2xl font-bold">$0</p>
+        </div>
+
+        <div className="rounded-xl border p-4">
+          <p className="text-sm text-gray-500">Balance</p>
+          <p className="mt-2 text-2xl font-bold">$0</p>
+        </div>
+      </section>
+
+      <section className="rounded-xl border p-4">
+        <h3 className="text-lg font-semibold">Movimientos recientes</h3>
+        <p className="mt-2 text-sm text-gray-500">
+          Aquí mostraremos los últimos registros financieros.
+        </p>
+      </section>
+
+      <section className="rounded-xl border p-4">
+        <h3 className="text-lg font-semibold">Preparación para reporting</h3>
+        <p className="mt-2 text-sm text-gray-500">
+          Esta app manejará la operación diaria. Más adelante, los informes
+          imprimibles se apoyarán en una capa de reporting preparada para Looker.
+        </p>
+      </section>
+    </div>
   );
 }

@@ -1,44 +1,35 @@
-export default function DashboardPage() {
+import { getContextoUsuario } from "@/lib/contexto-usuario";
+
+export default async function DashboardPage() {
+  const contexto = await getContextoUsuario();
+
   return (
-    <div className="space-y-6">
-      <section>
-        <h2 className="text-2xl font-semibold">Resumen general</h2>
-        <p className="text-sm text-gray-500">
-          Vista inicial del estado financiero del emprendimiento.
-        </p>
-      </section>
+    <main className="p-6 space-y-6">
+      <h1 className="text-2xl font-semibold">Dashboard</h1>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border p-4">
-          <p className="text-sm text-gray-500">Ingresos del mes</p>
-          <p className="mt-2 text-2xl font-bold">$0</p>
-        </div>
-
-        <div className="rounded-xl border p-4">
-          <p className="text-sm text-gray-500">Gastos del mes</p>
-          <p className="mt-2 text-2xl font-bold">$0</p>
-        </div>
-
-        <div className="rounded-xl border p-4">
-          <p className="text-sm text-gray-500">Balance</p>
-          <p className="mt-2 text-2xl font-bold">$0</p>
-        </div>
+      <section className="rounded-xl border p-4">
+        <h2 className="font-semibold">Usuario</h2>
+        <pre className="text-sm mt-2">
+          {JSON.stringify(contexto.user.email, null, 2)}
+        </pre>
       </section>
 
       <section className="rounded-xl border p-4">
-        <h3 className="text-lg font-semibold">Movimientos recientes</h3>
-        <p className="mt-2 text-sm text-gray-500">
-          Aquí mostraremos los últimos registros financieros.
-        </p>
+        <h2 className="font-semibold">Rol</h2>
+        <p>{contexto.rol}</p>
       </section>
 
       <section className="rounded-xl border p-4">
-        <h3 className="text-lg font-semibold">Preparación para reporting</h3>
-        <p className="mt-2 text-sm text-gray-500">
-          Esta app manejará la operación diaria. Más adelante, los informes
-          imprimibles se apoyarán en una capa de reporting preparada para Looker.
-        </p>
+        <h2 className="font-semibold">Organizacion</h2>
+        <p>{contexto.organizacionId}</p>
       </section>
-    </div>
+
+      <section className="rounded-xl border p-4">
+        <h2 className="font-semibold">Sucursales visibles</h2>
+        <pre className="text-sm mt-2">
+          {JSON.stringify(contexto.sucursales, null, 2)}
+        </pre>
+      </section>
+    </main>
   );
 }

@@ -77,4 +77,36 @@ export async function subirDocumento(formData: FormData) {
   revalidatePath("/dashboard/registros");
 }
 
+export async function eliminarDocumento(formData: FormData) {
+  const supabase = await createClient();
+
+  const documentoId = String(formData.get("documento_id") ?? "");
+  const rutaArchivo = String(formData.get("ruta_archivo") ?? "");
+
+  if (!documentoId || !rutaArchivo) {
+    throw new Error("Faltan datos para eliminar el documento");
+  }
+
+  // 1. eliminar archivo del storage
+  const { error: errorStorage } = await supabase.storage
+    .from(BUCKET)
+    .remove([rutaArchivo]);
+
+  if (errorStorage) {
+    throw new Error("Error eliminando archivo del storage");
+  }
+
+  // 2. eliminar registro en base de datos
+  const { error: errorDB } = await supabase
+    .from("archivos_documentos")
+    .delete()
+    .eq("id", documentoId);
+
+  if (errorDB) {
+    throw new Error("Error eliminando metadata del documento");
+  }
+
+  revalidatePath("/dashboard/registros");
+}
+
 

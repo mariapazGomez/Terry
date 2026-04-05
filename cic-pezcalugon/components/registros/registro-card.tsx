@@ -1,5 +1,6 @@
 import { subirDocumento } from "@/modules/documentos/actions";
 import { getDocumentosPorRegistro } from "@/modules/documentos/queries";
+import { eliminarDocumento } from "@/modules/documentos/actions";
 
 type RegistroCardProps = {
   registro: {
@@ -83,14 +84,25 @@ export default async function RegistroCard({ registro }: RegistroCardProps) {
                     </p>
                   </div>
 
-                  <a
-                    href={`/api/documentos?ruta=${encodeURIComponent(documento.ruta_archivo)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 underline"
-                  >
-                    Ver
-                  </a>
+                  <div className="flex gap-3 items-center">
+                    <a
+                      href={`/api/documentos?ruta=${encodeURIComponent(documento.ruta_archivo)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      Ver
+                    </a>
+
+                    <form action={eliminarDocumento}>
+                      <input type="hidden" name="documento_id" value={documento.id} />
+                      <input type="hidden" name="ruta_archivo" value={documento.ruta_archivo} />
+
+                      <button type="submit" className="text-red-600 underline">
+                        Eliminar
+                      </button>
+                    </form>
+                  </div>
                 </div>
               ))}
             </div>

@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import { getContextoUsuario } from "@/lib/contexto-usuario";
 
 export default async function PruebasRlsPage() {
   const supabase = await createClient();
+  const contexto = await getContextoUsuario();
 
   const {
     data: { user },
@@ -101,6 +103,26 @@ export default async function PruebasRlsPage() {
           </pre>
         )}
       </section>
+      <form
+        action={async (formData) => {
+          "use server";
+          const sucursalId = formData.get("sucursal_id") as string;
+          const { setSucursalActiva } = await import(
+            "@/app/actions/set-sucursal-activa"
+          );
+          await setSucursalActiva(sucursalId);
+        }}
+      >
+        <select name="sucursal_id" defaultValue={contexto.sucursalActiva?.id}>
+          {contexto.sucursales.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.nombre}
+            </option>
+          ))}
+        </select>
+
+        <button type="submit">Cambiar</button>
+      </form>
     </main>
   );
 }

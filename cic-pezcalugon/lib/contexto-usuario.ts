@@ -1,6 +1,24 @@
 import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 
-export async function getContextoUsuario() {
+type SucursalVisible = {
+  id: string;
+  nombre: string;
+};
+
+type ContextoUsuario = {
+  user: Awaited<ReturnType<ReturnType<typeof createClient>["auth"]["getUser"]>> extends {
+    data: { user: infer U };
+  }
+    ? U
+    : never;
+  organizacionId: string;
+  rol: "admin" | "lector";
+  sucursales: SucursalVisible[];
+  sucursalActiva: SucursalVisible | null;
+};
+
+export async function getContextoUsuario(): Promise<ContextoUsuario> {
   const supabase = await createClient();
 
   // 1. usuario autenticado
@@ -24,7 +42,7 @@ export async function getContextoUsuario() {
   }
 
   // 3. obtener sucursales visibles
-  let sucursales = [];
+  let sucursales: SucursalVisible[] = [];
 
   if (miembroOrg.rol === "admin") {
     // admin ve todas las sucursales de su organización
@@ -42,7 +60,25 @@ export async function getContextoUsuario() {
       .eq("usuario_id", user.id);
 
     sucursales =
-      data?.map((item: any) => item.sucursal).filter(Boolean) ?? [];
+      data
+        ?.map(
+          (item: { sucursal: SucursalVisible | null }) => item.sucursal
+        )
+        .filter((sucursal): sucursal is SucursalVisible => Boolean(sucursal)) ?? [];
+  }
+
+  const cookieStore = await cookies();
+  const sucursalCookie = cookieStore.get("sucursal_activa");
+
+  let sucursalActiva: SucursalVisible | null = null;
+
+  if (sucursalCookie) {
+    sucursalActiva = sucursales.find((s) => s.id === sucursalCookie.value) ?? null;
+  }
+
+  // fallback: primera sucursal
+  if (!sucursalActiva && sucursales.length > 0) {
+    sucursalActiva = sucursales[0];
   }
 
   return {
@@ -50,5 +86,6 @@ export async function getContextoUsuario() {
     organizacionId: miembroOrg.organizacion_id,
     rol: miembroOrg.rol,
     sucursales,
+    sucursalActiva,
   };
 }

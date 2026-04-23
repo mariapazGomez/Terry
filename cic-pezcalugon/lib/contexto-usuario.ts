@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import type { User } from "@supabase/supabase-js";
 
 type SucursalVisible = {
   id: string;
@@ -7,11 +8,7 @@ type SucursalVisible = {
 };
 
 type ContextoUsuario = {
-  user: Awaited<ReturnType<ReturnType<typeof createClient>["auth"]["getUser"]>> extends {
-    data: { user: infer U };
-  }
-    ? U
-    : never;
+  user: User;
   organizacionId: string;
   rol: "admin" | "lector";
   sucursales: SucursalVisible[];
@@ -84,7 +81,7 @@ export async function getContextoUsuario(): Promise<ContextoUsuario> {
   return {
     user,
     organizacionId: miembroOrg.organizacion_id,
-    rol: miembroOrg.rol,
+    rol: miembroOrg.rol as "admin" | "lector",
     sucursales,
     sucursalActiva,
   };

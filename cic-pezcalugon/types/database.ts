@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ajustes_propina: {
+        Row: {
+          creado_en: string | null
+          id: string
+          monto_ajuste: number
+          motivo: string | null
+          semana_id: string
+          trabajador_id: string
+        }
+        Insert: {
+          creado_en?: string | null
+          id?: string
+          monto_ajuste: number
+          motivo?: string | null
+          semana_id: string
+          trabajador_id: string
+        }
+        Update: {
+          creado_en?: string | null
+          id?: string
+          monto_ajuste?: number
+          motivo?: string | null
+          semana_id?: string
+          trabajador_id?: string
+        }
+        Relationships: []
+      }
       archivos_documentos: {
         Row: {
           creado_en: string
@@ -71,6 +98,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      asignaciones_turno: {
+        Row: {
+          creado_en: string | null
+          estado: string | null
+          id: string
+          trabajador_id: string
+          turno_dia_id: string
+        }
+        Insert: {
+          creado_en?: string | null
+          estado?: string | null
+          id?: string
+          trabajador_id: string
+          turno_dia_id: string
+        }
+        Update: {
+          creado_en?: string | null
+          estado?: string | null
+          id?: string
+          trabajador_id?: string
+          turno_dia_id?: string
+        }
+        Relationships: []
       }
       categorias: {
         Row: {
@@ -218,6 +269,60 @@ export type Database = {
         }
         Relationships: []
       }
+      propinas_calculadas: {
+        Row: {
+          ajustado: boolean | null
+          creado_en: string | null
+          id: string
+          monto_total: number
+          semana_id: string
+          total_participaciones: number
+          trabajador_id: string
+        }
+        Insert: {
+          ajustado?: boolean | null
+          creado_en?: string | null
+          id?: string
+          monto_total: number
+          semana_id: string
+          total_participaciones: number
+          trabajador_id: string
+        }
+        Update: {
+          ajustado?: boolean | null
+          creado_en?: string | null
+          id?: string
+          monto_total?: number
+          semana_id?: string
+          total_participaciones?: number
+          trabajador_id?: string
+        }
+        Relationships: []
+      }
+      propinas_diarias: {
+        Row: {
+          creado_en: string | null
+          fecha: string
+          id: string
+          monto_total: number
+          sucursal_id: string
+        }
+        Insert: {
+          creado_en?: string | null
+          fecha: string
+          id?: string
+          monto_total: number
+          sucursal_id: string
+        }
+        Update: {
+          creado_en?: string | null
+          fecha?: string
+          id?: string
+          monto_total?: number
+          sucursal_id?: string
+        }
+        Relationships: []
+      }
       registros_financieros: {
         Row: {
           actualizado_en: string
@@ -313,6 +418,33 @@ export type Database = {
           },
         ]
       }
+      semanas: {
+        Row: {
+          creado_en: string | null
+          estado: string | null
+          fecha_fin: string
+          fecha_inicio: string
+          id: string
+          organizacion_id: string
+        }
+        Insert: {
+          creado_en?: string | null
+          estado?: string | null
+          fecha_fin: string
+          fecha_inicio: string
+          id?: string
+          organizacion_id: string
+        }
+        Update: {
+          creado_en?: string | null
+          estado?: string | null
+          fecha_fin?: string
+          fecha_inicio?: string
+          id?: string
+          organizacion_id?: string
+        }
+        Relationships: []
+      }
       sucursales: {
         Row: {
           codigo: string | null
@@ -348,12 +480,109 @@ export type Database = {
           },
         ]
       }
+      trabajadores: {
+        Row: {
+          activo: boolean | null
+          actualizado_en: string | null
+          creado_en: string | null
+          email: string | null
+          id: string
+          nombre: string
+          organizacion_id: string
+          rut: string | null
+          telefono: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          actualizado_en?: string | null
+          creado_en?: string | null
+          email?: string | null
+          id?: string
+          nombre: string
+          organizacion_id: string
+          rut?: string | null
+          telefono?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          actualizado_en?: string | null
+          creado_en?: string | null
+          email?: string | null
+          id?: string
+          nombre?: string
+          organizacion_id?: string
+          rut?: string | null
+          telefono?: string | null
+        }
+        Relationships: []
+      }
+      turnos: {
+        Row: {
+          codigo: string
+          id: string
+        }
+        Insert: {
+          codigo: string
+          id?: string
+        }
+        Update: {
+          codigo?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      turnos_dia: {
+        Row: {
+          creado_en: string | null
+          fecha: string
+          id: string
+          semana_id: string
+          sucursal_id: string
+          turno_id: string
+        }
+        Insert: {
+          creado_en?: string | null
+          fecha: string
+          id?: string
+          semana_id: string
+          sucursal_id: string
+          turno_id: string
+        }
+        Update: {
+          creado_en?: string | null
+          fecha?: string
+          id?: string
+          semana_id?: string
+          sucursal_id?: string
+          turno_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      es_admin_organizacion: {
+        Args: { p_organizacion_id: string }
+        Returns: boolean
+      }
+      es_miembro_organizacion: {
+        Args: { p_organizacion_id: string }
+        Returns: boolean
+      }
+      generar_turnos_semana: {
+        Args: {
+          p_fecha_inicio: string
+          p_semana_id: string
+          p_sucursal_id: string
+        }
+        Returns: undefined
+      }
+      tiene_acceso_sucursal: {
+        Args: { p_sucursal_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

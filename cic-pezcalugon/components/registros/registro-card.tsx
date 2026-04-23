@@ -1,6 +1,7 @@
 import { subirDocumento } from "@/modules/documentos/actions";
 import { getDocumentosPorRegistro } from "@/modules/documentos/queries";
 import { eliminarDocumento } from "@/modules/documentos/actions";
+import { marcarComoPagado } from "@/modules/registros-financieros/actions";
 
 type RegistroCardProps = {
   registro: {
@@ -27,7 +28,18 @@ export default async function RegistroCard({ registro }: RegistroCardProps) {
         <p className="font-medium">
           {registro.tipo_registro} - {registro.monto_total} {registro.moneda}
         </p>
+        <div className="flex items-center gap-3">
         <p className="text-sm text-gray-600">Estado: {registro.estado}</p>
+
+        {registro.estado !== "pagado" && (
+          <form action={marcarComoPagado}>
+            <input type="hidden" name="registro_id" value={registro.id} />
+            <button className="text-green-600 underline text-sm">
+              Marcar como pagado
+            </button>
+          </form>
+        )}
+        </div>
         <p className="text-sm text-gray-600">Fecha: {registro.fecha_emision}</p>
         <p className="text-sm text-gray-600">
           Documento: {registro.numero_documento ?? "Sin numero"}

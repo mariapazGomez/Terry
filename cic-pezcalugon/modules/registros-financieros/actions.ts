@@ -17,7 +17,7 @@ export async function crearRegistroFinanciero(formData: FormData) {
     throw new Error("No hay sucursal activa");
   }
 
-    const parsed = registroFinancieroSchema.safeParse({
+  const parsed = registroFinancieroSchema.safeParse({
     tipo_registro: formData.get("tipo_registro"),
     estado: formData.get("estado"),
     fecha_emision: formData.get("fecha_emision"),
@@ -39,7 +39,7 @@ export async function crearRegistroFinanciero(formData: FormData) {
     throw new Error("Datos invalidos");
   }
 
-    const {
+  const {
     tipo_registro,
     estado,
     fecha_emision,
@@ -75,6 +75,25 @@ export async function crearRegistroFinanciero(formData: FormData) {
 
   if (error) {
     throw new Error(`No se pudo crear el registro: ${error.message}`);
+  }
+
+  revalidatePath("/dashboard/registros");
+}
+
+export async function marcarComoPagado(formData: FormData) {
+  const supabase = await createClient();
+
+  const registroId = String(formData.get("registro_id") ?? "");
+
+  const { error } = await supabase
+    .from("registros_financieros")
+    .update({
+      estado: "pagado",
+    })
+    .eq("id", registroId);
+
+  if (error) {
+    throw new Error("No se pudo actualizar el estado");
   }
 
   revalidatePath("/dashboard/registros");

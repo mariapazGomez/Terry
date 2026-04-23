@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       />
       <div className="flex flex-1">
         <AppSidebar />
-        <main className="flex-1 bg-zinc-50 overflow-auto">
+        <main className="flex-1 bg-slate-50 overflow-auto">
           {children}
         </main>
       </div>

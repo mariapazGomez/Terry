@@ -1,19 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { getContextoUsuario } from "@/lib/contexto-usuario";
 
-export async function getResumenMes() {
+export async function getResumenMes(anio: number, mes: number) {
   const supabase = await createClient();
   const contexto = await getContextoUsuario();
 
   if (!contexto.sucursalActiva) return null;
 
-  const ahora = new Date();
-  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0)
-    .toISOString()
-    .split("T")[0];
+  const inicioMes = new Date(anio, mes - 1, 1).toISOString().split("T")[0];
+  const finMes = new Date(anio, mes, 0).toISOString().split("T")[0];
 
   const { data, error } = await supabase
     .from("registros_financieros")
@@ -35,10 +30,14 @@ export async function getResumenMes() {
     .reduce((sum, r) => sum + r.monto_total, 0);
 
   const pendientes = registros.filter((r) => r.estado === "pendiente").length;
+  const totalRegistros = registros.length;
 
-  const mes = ahora.toLocaleDateString("es-CL", { month: "long", year: "numeric" });
+  const label = new Date(anio, mes - 1, 1).toLocaleDateString("es-CL", {
+    month: "long",
+    year: "numeric",
+  });
 
-  return { ingresos, egresos, balance: ingresos - egresos, pendientes, mes };
+  return { ingresos, egresos, balance: ingresos - egresos, pendientes, totalRegistros, label };
 }
 
 export async function getCategorias() {
@@ -58,15 +57,13 @@ export async function getCategorias() {
   return data ?? [];
 }
 
-export async function getRegistrosFinancieros() {
+export async function getRegistrosFinancieros(anio?: number, mes?: number) {
   const supabase = await createClient();
   const contexto = await getContextoUsuario();
 
-  if (!contexto.sucursalActiva) {
-    return [];
-  }
+  if (!contexto.sucursalActiva) return [];
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("registros_financieros")
     .select(`
       id,
@@ -86,9 +83,13 @@ export async function getRegistrosFinancieros() {
     .eq("sucursal_id", contexto.sucursalActiva.id)
     .order("fecha_emision", { ascending: false });
 
-  if (error) {
-    throw new Error("No se pudieron obtener los registros financieros");
+  if (anio && mes) {
+    const inicio = new Date(anio, mes - 1, 1).toISOString().split("T")[0];
+    const fin = new Date(anio, mes, 0).toISOString().split("T")[0];
+    query = query.gte("fecha_emision", inicio).lte("fecha_emision", fin);
   }
 
+  const { data, error } = await query.limit(10);
+  if (error) throw new Error("No se pudieron obtener los registros financieros");
   return data ?? [];
 }

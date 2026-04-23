@@ -1,5 +1,4 @@
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { getContextoUsuario } from "@/lib/contexto-usuario";
 import {
   getResumenMes,
@@ -9,10 +8,11 @@ import {
   getDistribucionEgresos,
 } from "@/modules/registros-financieros/queries";
 import { setSucursalActiva } from "@/app/actions/set-sucursal-activa";
-
-const VentasChart = dynamic(() => import("@/components/dashboard/ventas-chart"), { ssr: false });
-const ComparativaChart = dynamic(() => import("@/components/dashboard/comparativa-chart"), { ssr: false });
-const DistribucionChart = dynamic(() => import("@/components/dashboard/distribucion-chart"), { ssr: false });
+import {
+  VentasChartWrapper as VentasChart,
+  ComparativaChartWrapper as ComparativaChart,
+  DistribucionChartWrapper as DistribucionChart,
+} from "@/components/dashboard/charts-wrapper";
 
 function formatCLP(amount: number) {
   return new Intl.NumberFormat("es-CL", {

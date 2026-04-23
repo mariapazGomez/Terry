@@ -155,6 +155,83 @@ export type Database = {
           },
         ]
       }
+      gastos_recurrentes: {
+        Row: {
+          activo: boolean
+          categoria_id: string | null
+          creado_en: string
+          dia_del_mes: number | null
+          frecuencia: string
+          id: string
+          monto_estimado: number
+          moneda: string
+          nombre: string
+          organizacion_id: string
+          proveedor_id: string | null
+          sucursal_id: string | null
+          tipo_gasto: string
+        }
+        Insert: {
+          activo?: boolean
+          categoria_id?: string | null
+          creado_en?: string
+          dia_del_mes?: number | null
+          frecuencia: string
+          id?: string
+          monto_estimado: number
+          moneda?: string
+          nombre: string
+          organizacion_id: string
+          proveedor_id?: string | null
+          sucursal_id?: string | null
+          tipo_gasto: string
+        }
+        Update: {
+          activo?: boolean
+          categoria_id?: string | null
+          creado_en?: string
+          dia_del_mes?: number | null
+          frecuencia?: string
+          id?: string
+          monto_estimado?: number
+          moneda?: string
+          nombre?: string
+          organizacion_id?: string
+          proveedor_id?: string | null
+          sucursal_id?: string | null
+          tipo_gasto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gastos_recurrentes_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_recurrentes_organizacion_id_fkey"
+            columns: ["organizacion_id"]
+            isOneToOne: false
+            referencedRelation: "organizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_recurrentes_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_recurrentes_sucursal_id_fkey"
+            columns: ["sucursal_id"]
+            isOneToOne: false
+            referencedRelation: "sucursales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       miembros_organizacion: {
         Row: {
           creado_en: string
@@ -230,6 +307,50 @@ export type Database = {
           },
         ]
       }
+      integraciones_oauth: {
+        Row: {
+          access_token: string
+          actualizado_en: string
+          creado_en: string
+          estado: string
+          expira_en: string | null
+          id: string
+          organizacion_id: string
+          proveedor: string
+          refresh_token: string | null
+        }
+        Insert: {
+          access_token: string
+          actualizado_en?: string
+          creado_en?: string
+          estado?: string
+          expira_en?: string | null
+          id?: string
+          organizacion_id: string
+          proveedor: string
+          refresh_token?: string | null
+        }
+        Update: {
+          access_token?: string
+          actualizado_en?: string
+          creado_en?: string
+          estado?: string
+          expira_en?: string | null
+          id?: string
+          organizacion_id?: string
+          proveedor?: string
+          refresh_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integraciones_oauth_organizacion_id_fkey"
+            columns: ["organizacion_id"]
+            isOneToOne: false
+            referencedRelation: "organizaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizaciones: {
         Row: {
           creado_en: string
@@ -268,6 +389,47 @@ export type Database = {
           nombre_completo?: string | null
         }
         Relationships: []
+      }
+      proveedores: {
+        Row: {
+          activo: boolean
+          creado_en: string
+          email: string | null
+          id: string
+          nombre: string
+          organizacion_id: string
+          rut: string | null
+          tipo: string
+        }
+        Insert: {
+          activo?: boolean
+          creado_en?: string
+          email?: string | null
+          id?: string
+          nombre: string
+          organizacion_id: string
+          rut?: string | null
+          tipo: string
+        }
+        Update: {
+          activo?: boolean
+          creado_en?: string
+          email?: string | null
+          id?: string
+          nombre?: string
+          organizacion_id?: string
+          rut?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedores_organizacion_id_fkey"
+            columns: ["organizacion_id"]
+            isOneToOne: false
+            referencedRelation: "organizaciones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       propinas_calculadas: {
         Row: {
@@ -333,7 +495,11 @@ export type Database = {
           estado: string
           fecha_emision: string
           fecha_vencimiento: string | null
+          fuente: string
+          gasto_recurrente_id: string | null
           id: string
+          id_externo: string | null
+          metadatos_externos: Json | null
           moneda: string
           monto_impuesto: number
           monto_neto: number
@@ -341,8 +507,11 @@ export type Database = {
           numero_documento: string | null
           observaciones: string | null
           organizacion_id: string
+          proveedor_id: string | null
           sucursal_id: string
           tercero_nombre: string | null
+          tipo_documento: string | null
+          tipo_gasto: string | null
           tipo_registro: string
         }
         Insert: {
@@ -354,7 +523,11 @@ export type Database = {
           estado?: string
           fecha_emision: string
           fecha_vencimiento?: string | null
+          fuente?: string
+          gasto_recurrente_id?: string | null
           id?: string
+          id_externo?: string | null
+          metadatos_externos?: Json | null
           moneda?: string
           monto_impuesto?: number
           monto_neto?: number
@@ -362,8 +535,11 @@ export type Database = {
           numero_documento?: string | null
           observaciones?: string | null
           organizacion_id: string
+          proveedor_id?: string | null
           sucursal_id: string
           tercero_nombre?: string | null
+          tipo_documento?: string | null
+          tipo_gasto?: string | null
           tipo_registro: string
         }
         Update: {
@@ -375,7 +551,11 @@ export type Database = {
           estado?: string
           fecha_emision?: string
           fecha_vencimiento?: string | null
+          fuente?: string
+          gasto_recurrente_id?: string | null
           id?: string
+          id_externo?: string | null
+          metadatos_externos?: Json | null
           moneda?: string
           monto_impuesto?: number
           monto_neto?: number
@@ -383,8 +563,11 @@ export type Database = {
           numero_documento?: string | null
           observaciones?: string | null
           organizacion_id?: string
+          proveedor_id?: string | null
           sucursal_id?: string
           tercero_nombre?: string | null
+          tipo_documento?: string | null
+          tipo_gasto?: string | null
           tipo_registro?: string
         }
         Relationships: [
@@ -403,10 +586,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "registros_financieros_gasto_recurrente_id_fkey"
+            columns: ["gasto_recurrente_id"]
+            isOneToOne: false
+            referencedRelation: "gastos_recurrentes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "registros_financieros_organizacion_id_fkey"
             columns: ["organizacion_id"]
             isOneToOne: false
             referencedRelation: "organizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registros_financieros_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
           {
@@ -444,6 +641,50 @@ export type Database = {
           organizacion_id?: string
         }
         Relationships: []
+      }
+      sincronizaciones: {
+        Row: {
+          creado_en: string
+          detalle_error: string | null
+          estado: string
+          fin: string | null
+          id: string
+          inicio: string
+          organizacion_id: string
+          proveedor: string
+          registros_importados: number | null
+        }
+        Insert: {
+          creado_en?: string
+          detalle_error?: string | null
+          estado?: string
+          fin?: string | null
+          id?: string
+          inicio: string
+          organizacion_id: string
+          proveedor: string
+          registros_importados?: number | null
+        }
+        Update: {
+          creado_en?: string
+          detalle_error?: string | null
+          estado?: string
+          fin?: string | null
+          id?: string
+          inicio?: string
+          organizacion_id?: string
+          proveedor?: string
+          registros_importados?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sincronizaciones_organizacion_id_fkey"
+            columns: ["organizacion_id"]
+            isOneToOne: false
+            referencedRelation: "organizaciones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sucursales: {
         Row: {

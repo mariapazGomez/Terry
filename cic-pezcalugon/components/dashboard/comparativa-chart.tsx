@@ -68,7 +68,7 @@ export default function ComparativaChart({ data }: { data: MesData[] }) {
   return (
     <div className="flex flex-col h-full">
       <CustomLegend />
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={224}>
         <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barGap={2}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
           <XAxis

@@ -241,7 +241,7 @@ export default async function DashboardPage({
                   <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-400" />Egresos</span>
                 </div>
               </div>
-              <div className="h-64 mt-4">
+              <div className="mt-4">
                 <VentasChart data={ventasDiarias} />
               </div>
             </div>
@@ -250,7 +250,7 @@ export default async function DashboardPage({
             <div className="lg:col-span-2 rounded-xl bg-white shadow-sm p-6">
               <p className="text-sm font-semibold text-zinc-800">Distribución de egresos</p>
               <p className="text-xs text-zinc-400 mt-0.5">Por categoría del período</p>
-              <div className="h-72 mt-4">
+              <div className="mt-4">
                 <DistribucionChart data={distribucion} />
               </div>
             </div>
@@ -264,7 +264,7 @@ export default async function DashboardPage({
                 <p className="text-xs text-zinc-400 mt-0.5">Ingresos vs egresos — últimos 5 meses</p>
               </div>
             </div>
-            <div className="h-56">
+            <div className="mt-2">
               <ComparativaChart data={comparativa} />
             </div>
           </div>

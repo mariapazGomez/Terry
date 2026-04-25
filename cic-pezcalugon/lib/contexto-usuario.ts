@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import type { User } from "@supabase/supabase-js";
@@ -15,7 +16,7 @@ type ContextoUsuario = {
   sucursalActiva: SucursalVisible | null;
 };
 
-export async function getContextoUsuario(): Promise<ContextoUsuario> {
+export const getContextoUsuario = cache(async (): Promise<ContextoUsuario> => {
   const supabase = await createClient();
 
   // 1. usuario autenticado
@@ -85,4 +86,4 @@ export async function getContextoUsuario(): Promise<ContextoUsuario> {
     sucursales,
     sucursalActiva,
   };
-}
+});

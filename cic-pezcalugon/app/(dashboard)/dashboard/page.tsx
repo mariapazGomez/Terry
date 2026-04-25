@@ -3,58 +3,44 @@ import { getContextoUsuario } from "@/lib/contexto-usuario";
 import {
   getResumenMes,
   getRegistrosFinancieros,
-  getVentasDiarias,
   getComparativaMeses,
   getDistribucionEgresos,
 } from "@/modules/registros-financieros/queries";
 import { setSucursalActiva } from "@/app/actions/set-sucursal-activa";
 import {
-  VentasChartWrapper as VentasChart,
-  ComparativaChartWrapper as ComparativaChart,
-  DistribucionChartWrapper as DistribucionChart,
+  FlujoLineasChartWrapper,
+  DistribucionChartWrapper,
 } from "@/components/dashboard/charts-wrapper";
+import TerryPanel from "@/components/dashboard/terry-panel";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatCLP(n: number) {
-  if (Math.abs(n) >= 1_000_000)
-    return `${n < 0 ? "-" : ""}$${(Math.abs(n) / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(n) >= 1_000)
-    return `${n < 0 ? "-" : ""}$${(Math.abs(n) / 1_000).toFixed(0)}k`;
+const GREEN  = "oklch(0.62 0.15 145)";
+const RED    = "oklch(0.58 0.19 27)";
+const YELLOW = "oklch(0.82 0.15 85)";
+const YELLOW_FG = "oklch(0.45 0.12 75)";
+const INK    = "#0a0a0a";
+const INK50  = "rgba(10,10,10,0.52)";
+const INK30  = "rgba(10,10,10,0.30)";
+const INK15  = "rgba(10,10,10,0.13)";
+const INK08  = "rgba(10,10,10,0.07)";
+
+function formatCLP(n: number): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "-" : "";
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000)     return `${sign}$${(abs / 1_000).toFixed(0)}k`;
   return new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(n);
 }
 
-function formatCLPFull(n: number) {
-  return new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(n);
+function mesAnterior(a: number, m: number) {
+  return m === 1 ? { anio: a - 1, mes: 12 } : { anio: a, mes: m - 1 };
 }
-
-function mesAnterior(a: number, m: number) { return m === 1 ? { anio: a - 1, mes: 12 } : { anio: a, mes: m - 1 }; }
-function mesSiguiente(a: number, m: number) { return m === 12 ? { anio: a + 1, mes: 1 } : { anio: a, mes: m + 1 }; }
-function mesUrl(a: number, m: number) { return `/dashboard?anio=${a}&mes=${m}`; }
-
-// ─── Subcomponentes ───────────────────────────────────────────────────────────
-
-function IconArrowUp() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="18 15 12 9 6 15" />
-    </svg>
-  );
+function mesSiguiente(a: number, m: number) {
+  return m === 12 ? { anio: a + 1, mes: 1 } : { anio: a, mes: m + 1 };
 }
-function IconArrowDown() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
-
-function NavBtn({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link href={href} className="flex items-center justify-center h-8 w-8 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white/70 hover:text-white">
-      {children}
-    </Link>
-  );
+function mesUrl(a: number, m: number) {
+  return `/dashboard?anio=${a}&mes=${m}`;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -64,8 +50,8 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ anio?: string; mes?: string }>;
 }) {
-  const params = await searchParams;
-  const ahora = new Date();
+  const params   = await searchParams;
+  const ahora    = new Date();
 
   const anioDefault = ahora.getMonth() === 0 ? ahora.getFullYear() - 1 : ahora.getFullYear();
   const mesDefault  = ahora.getMonth() === 0 ? 12 : ahora.getMonth();
@@ -82,252 +68,465 @@ export default async function DashboardPage({
 
   const contexto = await getContextoUsuario();
 
-  const [resumen, registros, ventasDiarias, comparativa, distribucion] = await Promise.all([
+  // Nombre para el saludo
+  const nombre =
+    (contexto.user.user_metadata?.full_name as string | undefined)
+    ?? (contexto.user.user_metadata?.name as string | undefined)
+    ?? contexto.user.email?.split("@")[0]
+    ?? "Usuario";
+  const nombreDisplay = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+
+  // Saludo según hora
+  const hora = ahora.getHours();
+  const saludo = hora < 12 ? "Buenos días" : hora < 18 ? "Buenas tardes" : "Buenas noches";
+
+  // Fecha formateada
+  const fechaLabel = ahora.toLocaleDateString("es-CL", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
+
+  const [resumen, registros, comparativa, distribucion] = await Promise.all([
     getResumenMes(anio, mes),
     getRegistrosFinancieros(anio, mes),
-    getVentasDiarias(anio, mes),
-    getComparativaMeses(anio, mes, 5),
+    getComparativaMeses(anio, mes, 6),
     getDistribucionEgresos(anio, mes),
   ]);
 
   const sinDatos = !resumen || resumen.totalRegistros === 0;
 
+  const margen =
+    resumen && resumen.ingresos > 0
+      ? `${((resumen.balance / resumen.ingresos) * 100).toFixed(1)}%`
+      : "—";
+
+  // Registros pendientes
+  const pendientes = registros.filter((r) => r.estado !== "pagado");
+
+  // IVA F29: vence el 20 del mes siguiente al período
+  const vencF29 = new Date(anio, mes, 20); // mes es 1-indexed, Date usa 0-indexed → mes es el siguiente mes
+  const diasF29 = Math.ceil((vencF29.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24));
+  const ivaEstimado = resumen ? Math.round(resumen.ingresos * 0.19) : 0;
+  const mesNombreF29 = new Date(anio, mes - 1, 20)
+    .toLocaleDateString("es-CL", { month: "short" })
+    .replace(".", "");
+  const f29Label = `SII · vence 20-${mesNombreF29}`;
+
+  // Etiqueta del período navegado
+  const periodoLabel = resumen?.label ?? `${anio}`;
+
   return (
-    <div className="min-h-full p-6 space-y-6">
+    <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
 
-      {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-900 via-slate-800 to-slate-900 p-6 text-white shadow-lg">
-        {/* Decoración */}
-        <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-indigo-500/10" />
-        <div className="pointer-events-none absolute -bottom-10 right-32 h-40 w-40 rounded-full bg-violet-500/10" />
+      {/* ── PERIOD NAV BAR ────────────────────────────────────────────────── */}
+      <div
+        style={{
+          background: "white",
+          borderBottom: `1px solid ${INK15}`,
+          padding: "10px 24px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* Chevron left */}
+          <Link
+            href={mesUrl(ant.anio, ant.mes)}
+            style={{
+              width: 28, height: 28, borderRadius: 6,
+              border: `1px solid ${INK15}`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: INK50, textDecoration: "none", transition: "background 0.15s",
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </Link>
 
-        {/* Navegación de mes */}
-        <div className="relative mb-5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <NavBtn href={mesUrl(ant.anio, ant.mes)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-            </NavBtn>
-            <div>
-              <p className="text-xs text-indigo-300 uppercase tracking-widest">Período</p>
-              <p className="text-lg font-semibold capitalize">{resumen?.label ?? `${anio}`}</p>
-            </div>
-            {!esFuturo && (
-              <NavBtn href={mesUrl(sig.anio, sig.mes)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-              </NavBtn>
-            )}
-            {esActual && (
-              <span className="ml-1 rounded-full bg-indigo-500/30 px-2.5 py-0.5 text-xs text-indigo-200">
-                En curso
-              </span>
-            )}
-          </div>
+          <span
+            style={{
+              fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 500,
+              color: INK, minWidth: "8rem", textAlign: "center",
+              textTransform: "capitalize",
+            }}
+          >
+            {periodoLabel}
+          </span>
 
-          {/* Selector sucursal */}
-          {contexto.sucursales.length > 1 && (
-            <form action={async (fd) => { "use server"; await setSucursalActiva(String(fd.get("sucursal_id") ?? "")); }}>
-              <select
-                name="sucursal_id"
-                defaultValue={contexto.sucursalActiva?.id}
-                className="rounded-lg bg-white/10 border border-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30 cursor-pointer"
-                onChange={undefined}
-              >
-                {contexto.sucursales.map((s) => (
-                  <option key={s.id} value={s.id} className="text-zinc-900">{s.nombre}</option>
-                ))}
-              </select>
-            </form>
+          {!esFuturo ? (
+            <Link
+              href={mesUrl(sig.anio, sig.mes)}
+              style={{
+                width: 28, height: 28, borderRadius: 6,
+                border: `1px solid ${INK15}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: INK50, textDecoration: "none",
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </Link>
+          ) : (
+            <div style={{ width: 28 }} />
+          )}
+
+          {esActual && (
+            <span
+              className="terry-tag"
+              style={{ background: INK08, color: INK50 }}
+            >
+              en curso
+            </span>
           )}
         </div>
 
-        {/* Stats principales */}
-        {sinDatos ? (
-          <div className="py-4 text-center text-indigo-300 text-sm">
-            Sin datos para este período —{" "}
-            <Link href="/dashboard/seed" className="underline underline-offset-2 hover:text-white">cargar datos de prueba</Link>
-          </div>
-        ) : (
-          <div className="relative grid grid-cols-3 gap-4">
-            {/* Balance */}
-            <div className="col-span-1 border-r border-white/10 pr-4">
-              <p className="text-xs text-slate-400 uppercase tracking-widest">Balance neto</p>
-              <p className={`mt-1 text-4xl font-bold tracking-tight ${resumen!.balance >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                {formatCLP(resumen!.balance)}
-              </p>
-              <p className="mt-1 text-xs text-slate-400">{resumen!.totalRegistros} registros totales</p>
-            </div>
-            {/* Ingresos */}
-            <div className="border-r border-white/10 pr-4">
-              <p className="text-xs text-slate-400 uppercase tracking-widest">Ingresos</p>
-              <p className="mt-1 text-2xl font-semibold text-emerald-400">{formatCLP(resumen!.ingresos)}</p>
-              <div className="mt-1 flex items-center gap-1 text-xs text-emerald-400/70">
-                <IconArrowUp />
-                <span>ventas del período</span>
-              </div>
-            </div>
-            {/* Egresos */}
-            <div>
-              <p className="text-xs text-slate-400 uppercase tracking-widest">Egresos</p>
-              <p className="mt-1 text-2xl font-semibold text-rose-400">{formatCLP(resumen!.egresos)}</p>
-              <div className="mt-1 flex items-center gap-1 text-xs text-rose-400/70">
-                <IconArrowDown />
-                <span>gastos del período</span>
-              </div>
-            </div>
-          </div>
+        {/* Selector sucursal */}
+        {contexto.sucursales.length > 1 && (
+          <form
+            action={async (fd) => {
+              "use server";
+              await setSucursalActiva(String(fd.get("sucursal_id") ?? ""));
+            }}
+          >
+            <select
+              name="sucursal_id"
+              defaultValue={contexto.sucursalActiva?.id}
+              style={{
+                border: `1px solid ${INK15}`, borderRadius: 7,
+                padding: "5px 10px", fontSize: 12, color: INK,
+                background: "white", fontFamily: "var(--font-sans)",
+                outline: "none", cursor: "pointer",
+              }}
+            >
+              {contexto.sucursales.map((s) => (
+                <option key={s.id} value={s.id}>{s.nombre}</option>
+              ))}
+            </select>
+          </form>
         )}
       </div>
 
-      {/* ── CONTENIDO CON DATOS ───────────────────────────────────────────── */}
-      {!sinDatos && (
-        <>
-          {/* ── KPI SECUNDARIOS ────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                label: "Margen neto",
-                value: resumen!.ingresos > 0
-                  ? `${((resumen!.balance / resumen!.ingresos) * 100).toFixed(1)}%`
-                  : "—",
-                sub: "ingresos − egresos / ingresos",
-                color: "border-indigo-500",
-                textColor: "text-indigo-600",
-                bg: "bg-indigo-50",
-              },
-              {
-                label: "Promedio diario",
-                value: formatCLP(Math.round(resumen!.ingresos / (ventasDiarias.length || 1))),
-                sub: `sobre ${ventasDiarias.length} días con ventas`,
-                color: "border-emerald-500",
-                textColor: "text-emerald-600",
-                bg: "bg-emerald-50",
-              },
-              {
-                label: "Total egresos",
-                value: formatCLPFull(resumen!.egresos),
-                sub: "incluyendo sueldos y servicios",
-                color: "border-rose-500",
-                textColor: "text-rose-600",
-                bg: "bg-rose-50",
-              },
-              {
-                label: "Pendientes de pago",
-                value: String(resumen!.pendientes),
-                sub: resumen!.pendientes === 1 ? "registro sin pagar" : "registros sin pagar",
-                color: "border-amber-500",
-                textColor: "text-amber-600",
-                bg: "bg-amber-50",
-              },
-            ].map((kpi) => (
-              <div key={kpi.label} className={`rounded-xl bg-white border-l-4 ${kpi.color} shadow-sm p-5`}>
-                <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest">{kpi.label}</p>
-                <p className={`mt-2 text-2xl font-bold ${kpi.textColor}`}>{kpi.value}</p>
-                <p className="mt-1 text-xs text-zinc-400">{kpi.sub}</p>
-              </div>
-            ))}
+      {/* ── MAIN CONTENT ─────────────────────────────────────────────────── */}
+      <div style={{ padding: "24px 24px", display: "flex", flexDirection: "column", gap: 24, flex: 1 }}>
+
+        {/* ── SALUDO ─────────────────────────────────────────────────────── */}
+        <div>
+          <div
+            style={{
+              fontSize: 11, color: INK50,
+              fontFamily: "var(--font-mono)", letterSpacing: "0.04em",
+              textTransform: "uppercase", marginBottom: 6,
+            }}
+          >
+            {fechaLabel}
           </div>
-
-          {/* ── CHARTS PRINCIPALES ─────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            {/* Área: flujo diario */}
-            <div className="lg:col-span-3 rounded-xl bg-white shadow-sm p-6">
-              <div className="flex items-start justify-between mb-1">
-                <div>
-                  <p className="text-sm font-semibold text-zinc-800">Flujo diario</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">Ingresos y egresos por día del mes</p>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-zinc-400 pt-1">
-                  <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />Ingresos</span>
-                  <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-400" />Egresos</span>
-                </div>
-              </div>
-              <div className="mt-4">
-                <VentasChart data={ventasDiarias} />
-              </div>
-            </div>
-
-            {/* Donut: distribución egresos */}
-            <div className="lg:col-span-2 rounded-xl bg-white shadow-sm p-6">
-              <p className="text-sm font-semibold text-zinc-800">Distribución de egresos</p>
-              <p className="text-xs text-zinc-400 mt-0.5">Por categoría del período</p>
-              <div className="mt-4">
-                <DistribucionChart data={distribucion} />
-              </div>
-            </div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: INK, letterSpacing: "-0.02em" }}>
+            {saludo}, {nombreDisplay}
           </div>
-
-          {/* ── COMPARATIVA MESES ──────────────────────────────────────────── */}
-          <div className="rounded-xl bg-white shadow-sm p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-sm font-semibold text-zinc-800">Comparativa mensual</p>
-                <p className="text-xs text-zinc-400 mt-0.5">Ingresos vs egresos — últimos 5 meses</p>
-              </div>
-            </div>
-            <div className="mt-2">
-              <ComparativaChart data={comparativa} />
-            </div>
+          <div style={{ fontSize: 13.5, color: "rgba(10,10,10,0.70)", marginTop: 4, lineHeight: 1.5, maxWidth: 560 }}>
+            {sinDatos
+              ? "No hay registros financieros para este período."
+              : `Resumen financiero de ${periodoLabel}. Los paneles muestran la información actualizada de tus cuentas.`}
           </div>
+        </div>
 
-          {/* ── TABLA MOVIMIENTOS ──────────────────────────────────────────── */}
-          <div className="rounded-xl bg-white shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-zinc-800">Últimos movimientos</p>
-                <p className="text-xs text-zinc-400 mt-0.5">10 más recientes del período</p>
-              </div>
-              <Link
-                href="/dashboard/registros"
-                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+        {sinDatos ? (
+          /* Empty state */
+          <div
+            className="terry-card"
+            style={{
+              padding: "48px 24px", display: "flex", flexDirection: "column",
+              alignItems: "center", textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: 44, height: 44, borderRadius: "50%",
+                background: INK08, display: "flex", alignItems: "center", justifyContent: "center",
+                marginBottom: 16,
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={INK50} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" />
+              </svg>
+            </div>
+            <p style={{ fontSize: 14, fontWeight: 600, color: INK }}>Sin datos para este período</p>
+            <p style={{ fontSize: 12, color: INK50, marginTop: 4 }}>
+              No hay registros en{" "}
+              <span style={{ textTransform: "capitalize" }}>{periodoLabel}</span>.
+            </p>
+            <Link
+              href="/dashboard/seed"
+              style={{
+                marginTop: 20, display: "inline-block",
+                padding: "8px 16px", borderRadius: 7,
+                background: INK, color: "white",
+                fontSize: 12, fontWeight: 600, textDecoration: "none",
+              }}
+            >
+              Cargar datos de prueba
+            </Link>
+          </div>
+        ) : (
+          <>
+            {/* ── KPI STRIP ──────────────────────────────────────────────── */}
+            <div>
+              <div
+                style={{
+                  display: "flex", alignItems: "baseline", justifyContent: "space-between",
+                  marginBottom: 12,
+                }}
               >
-                Ver todos →
-              </Link>
+                <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>
+                  Indicadores del mes
+                </span>
+                <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)" }}>
+                  {resumen!.totalRegistros} registros · actualizado
+                </span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+                {[
+                  {
+                    label: "Ingresos del mes",
+                    value: formatCLP(resumen!.ingresos),
+                    delta: `+${((resumen!.ingresos / (resumen!.ingresos || 1)) * 0).toFixed(1)}%`,
+                    rawDelta: null,
+                    tone: "green",
+                    sub: "vs. mes anterior",
+                  },
+                  {
+                    label: "Egresos del mes",
+                    value: formatCLP(resumen!.egresos),
+                    rawDelta: null,
+                    tone: "red",
+                    sub: "incluyendo sueldos",
+                  },
+                  {
+                    label: "Flujo neto",
+                    value: formatCLP(resumen!.balance),
+                    rawDelta: null,
+                    tone: resumen!.balance >= 0 ? "green" : "red",
+                    sub: "ingresos − egresos",
+                  },
+                  {
+                    label: "Margen neto",
+                    value: margen,
+                    rawDelta: null,
+                    tone: resumen!.balance >= 0 ? "green" : "red",
+                    sub: `${resumen!.pendientes} pendientes de pago`,
+                    isMono: false,
+                  },
+                ].map((kpi, i) => {
+                  const isRed   = kpi.tone === "red";
+                  const color   = isRed ? RED : GREEN;
+                  const arrow   = isRed ? "▾" : "▴";
+                  return (
+                    <div
+                      key={i}
+                      className="terry-card"
+                      style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 6 }}
+                    >
+                      <div style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 500 }}>
+                        {kpi.label}
+                      </div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 28, fontWeight: 600, color: INK, letterSpacing: "-0.02em", lineHeight: 1.05 }}>
+                        {kpi.value.startsWith("$") ? (
+                          <>
+                            <span style={{ fontSize: 16, color: INK50, marginRight: 2 }}>$</span>
+                            {kpi.value.slice(1)}
+                          </>
+                        ) : (
+                          kpi.value
+                        )}
+                      </div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: INK50, fontWeight: 400 }}>
+                        {kpi.sub}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            {registros.length === 0 ? (
-              <div className="py-10 text-center text-sm text-zinc-400">No hay movimientos en este período.</div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-50">
-                    {["Fecha", "Descripción", "Tipo", "Estado", "Monto"].map((h, i) => (
-                      <th key={h} className={`px-5 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400 ${i === 4 ? "text-right" : "text-left"} ${i >= 2 && i <= 3 ? "hidden sm:table-cell" : ""}`}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-50">
-                  {registros.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-3.5 text-zinc-400 tabular-nums text-xs whitespace-nowrap">
-                        {new Date(r.fecha_emision + "T12:00:00").toLocaleDateString("es-CL")}
-                      </td>
-                      <td className="px-5 py-3.5 text-zinc-700 max-w-xs truncate">
-                        {r.descripcion ?? r.tercero_nombre ?? "—"}
-                      </td>
-                      <td className="px-5 py-3.5 hidden sm:table-cell">
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${r.tipo_registro === "ingreso" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-600"}`}>
-                          {r.tipo_registro === "ingreso" ? "Ingreso" : "Gasto"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 hidden sm:table-cell">
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${r.estado === "pagado" ? "bg-zinc-100 text-zinc-500" : "bg-amber-100 text-amber-600"}`}>
-                          {r.estado === "pagado" ? "Pagado" : "Pendiente"}
-                        </span>
-                      </td>
-                      <td className={`px-5 py-3.5 text-right font-semibold tabular-nums ${r.tipo_registro === "ingreso" ? "text-emerald-600" : "text-rose-500"}`}>
-                        {r.tipo_registro === "gasto" ? "−" : "+"}
-                        {formatCLP(r.monto_total)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </>
-      )}
+            {/* ── ANÁLISIS FINANCIERO ────────────────────────────────────── */}
+            <div>
+              <div
+                style={{
+                  display: "flex", alignItems: "baseline", justifyContent: "space-between",
+                  marginBottom: 12,
+                }}
+              >
+                <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>
+                  Análisis financiero
+                </span>
+                <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", textTransform: "capitalize" }}>
+                  {periodoLabel}
+                </span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14 }}>
+                <div style={{ height: 280 }}>
+                  <TerryPanel title="Flujo de caja" subtitle="últimos 6 meses · CLP" tag="FLUJO" tagTone="ink">
+                    <FlujoLineasChartWrapper data={comparativa} />
+                  </TerryPanel>
+                </div>
+                <div style={{ height: 280 }}>
+                  <TerryPanel title="Composición de egresos" subtitle={periodoLabel} tag="SPLIT" tagTone="ink">
+                    <DistribucionChartWrapper data={distribucion} />
+                  </TerryPanel>
+                </div>
+              </div>
+            </div>
+
+            {/* ── VENCIMIENTOS ───────────────────────────────────────────── */}
+            <div>
+              <div
+                style={{
+                  display: "flex", alignItems: "baseline", justifyContent: "space-between",
+                  marginBottom: 12,
+                }}
+              >
+                <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>
+                  Vencimientos
+                </span>
+                <Link
+                  href="/dashboard/registros"
+                  style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", textDecoration: "none" }}
+                >
+                  ver todos →
+                </Link>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14 }}>
+                {/* Tabla cuentas por pagar */}
+                <div style={{ height: 280 }}>
+                  <TerryPanel
+                    title="Cuentas por pagar"
+                    subtitle={`próximos vencimientos · ${pendientes.length} ${pendientes.length === 1 ? "cuenta" : "cuentas"}`}
+                    tag="TABLA"
+                    tagTone="ink"
+                    bodyPadding={0}
+                  >
+                    {pendientes.length === 0 ? (
+                      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+                        <p style={{ fontSize: 12, color: INK30, fontFamily: "var(--font-mono)" }}>Sin vencimientos pendientes</p>
+                      </div>
+                    ) : (
+                      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                        {/* Table header */}
+                        <div
+                          style={{
+                            display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr",
+                            padding: "8px 14px", borderBottom: `1px solid ${INK08}`,
+                            fontFamily: "var(--font-mono)", fontSize: 9.5, fontWeight: 500,
+                            color: INK50, letterSpacing: "0.04em", textTransform: "uppercase",
+                          }}
+                        >
+                          <div>Proveedor</div>
+                          <div style={{ textAlign: "right" }}>Monto</div>
+                          <div style={{ textAlign: "right" }}>Estado</div>
+                        </div>
+
+                        {/* Rows */}
+                        {pendientes.slice(0, 6).map((r, ri) => (
+                          <div
+                            key={r.id}
+                            style={{
+                              display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr",
+                              padding: "8px 14px",
+                              borderBottom: ri < Math.min(pendientes.length, 6) - 1 ? `1px solid ${INK08}` : "none",
+                              fontSize: 11.5, color: INK, alignItems: "center",
+                            }}
+                          >
+                            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {r.tercero_nombre ?? r.descripcion ?? "—"}
+                            </div>
+                            <div style={{ textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: 500 }}>
+                              {formatCLP(r.monto_total)}
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <span
+                                style={{
+                                  fontFamily: "var(--font-mono)", fontSize: 10,
+                                  padding: "2px 6px", borderRadius: 4,
+                                  background: "oklch(0.96 0.08 85)",
+                                  color: YELLOW_FG,
+                                }}
+                              >
+                                Pendiente
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </TerryPanel>
+                </div>
+
+                {/* Alerta IVA F29 */}
+                <div style={{ height: 280 }}>
+                  <TerryPanel title="IVA · F29" subtitle={f29Label} tag="ATENCIÓN" tagTone="yellow">
+                    <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 0 }}>
+                      <div
+                        style={{
+                          fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 600,
+                          color: INK, lineHeight: 1.1, letterSpacing: "-0.01em",
+                        }}
+                      >
+                        {Math.max(0, diasF29)}{" "}
+                        <span style={{ fontSize: 12, color: INK50, fontWeight: 400 }}>días</span>
+                      </div>
+                      <div style={{ fontSize: 11.5, color: "rgba(10,10,10,0.70)", marginTop: 8, lineHeight: 1.4 }}>
+                        Declaración de IVA del período {periodoLabel}. Recuerda revisar tus compras antes de declarar.
+                      </div>
+                      <div style={{ marginTop: "auto", paddingTop: 16 }}>
+                        <div style={{ fontSize: 10, color: INK50, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+                          Estimado a pagar
+                        </div>
+                        <div
+                          style={{
+                            fontFamily: "var(--font-mono)", fontSize: 13,
+                            color: INK, fontWeight: 600,
+                          }}
+                        >
+                          {formatCLP(ivaEstimado)}
+                        </div>
+                        <div style={{ fontSize: 10, color: INK30, fontFamily: "var(--font-mono)", marginTop: 2 }}>
+                          estimación 19% · sujeto a crédito fiscal
+                        </div>
+                      </div>
+                    </div>
+                  </TerryPanel>
+                </div>
+              </div>
+            </div>
+
+            {/* ── BETA FOOTER ────────────────────────────────────────────── */}
+            <div
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "12px 16px",
+                background: "white",
+                border: `1px dashed ${INK15}`,
+                borderRadius: 10,
+                fontSize: 12, color: "rgba(10,10,10,0.70)",
+              }}
+            >
+              <span
+                className="terry-tag"
+                style={{ background: "oklch(0.96 0.08 85)", color: YELLOW_FG, letterSpacing: "0.04em", whiteSpace: "nowrap" }}
+              >
+                PRÓXIMAMENTE
+              </span>
+              <span>
+                En versiones futuras podrás pedirle a <strong>Terry</strong> que cree paneles personalizados en una pizarra interactiva.
+              </span>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

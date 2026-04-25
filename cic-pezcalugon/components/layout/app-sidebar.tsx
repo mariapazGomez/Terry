@@ -8,8 +8,8 @@ const navItems = [
     label: "Resumen",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-        <rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
       </svg>
     ),
   },
@@ -70,36 +70,61 @@ export default function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-56 min-h-[calc(100vh-3.5rem)] bg-zinc-950 flex flex-col">
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {navItems.map((item) => {
-          const isActive =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
+    <aside
+      style={{
+        width: 200, flexShrink: 0,
+        minHeight: "calc(100vh - 3.5rem)",
+        background: "white",
+        borderRight: "1px solid rgba(10,10,10,0.08)",
+        display: "flex", flexDirection: "column",
+      }}
+    >
+      <nav style={{ flex: 1, padding: "16px 10px" }}>
+        <p
+          style={{
+            padding: "0 10px", marginBottom: 8,
+            fontSize: 10, fontWeight: 600, letterSpacing: "0.05em",
+            textTransform: "uppercase", color: "rgba(10,10,10,0.35)",
+            fontFamily: "var(--font-mono)",
+          }}
+        >
+          Menú
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          {navItems.map((item) => {
+            const isActive =
+              item.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname.startsWith(item.href);
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${
-                isActive
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
-              }`}
-            >
-              <span className={isActive ? "text-white" : "text-zinc-500"}>
-                {item.icon}
-              </span>
-              {item.label}
-            </Link>
-          );
-        })}
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "7px 10px", borderRadius: 7,
+                  fontSize: 13, fontWeight: isActive ? 600 : 500,
+                  color: isActive ? "#0a0a0a" : "rgba(10,10,10,0.55)",
+                  background: isActive ? "rgba(10,10,10,0.06)" : "transparent",
+                  textDecoration: "none", transition: "background 0.15s, color 0.15s",
+                }}
+              >
+                <span style={{ color: isActive ? "#0a0a0a" : "rgba(10,10,10,0.35)" }}>
+                  {item.icon}
+                </span>
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
-      <div className="px-3 pb-4">
-        <div className="border-t border-zinc-800 pt-4">
-          <p className="px-3 text-xs text-zinc-600">v0.1.0</p>
+      <div style={{ padding: "0 14px 16px" }}>
+        <div style={{ borderTop: "1px solid rgba(10,10,10,0.08)", paddingTop: 12 }}>
+          <p style={{ fontSize: 10.5, color: "rgba(10,10,10,0.30)", fontFamily: "var(--font-mono)" }}>
+            v0.1.0
+          </p>
         </div>
       </div>
     </aside>

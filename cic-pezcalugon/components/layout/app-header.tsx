@@ -1,41 +1,149 @@
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { logout } from "@/modules/auth/actions";
+
+const NAV = [
+  { id: "inicio",    href: "/dashboard",         label: "Inicio" },
+  { id: "reportes",  href: "/dashboard/reportes", label: "Reportes" },
+  { id: "settings",  href: "/dashboard/settings", label: "Settings" },
+];
 
 type AppHeaderProps = {
   userEmail?: string;
   sucursalNombre?: string;
+  periodLabel?: string;
 };
 
-export default function AppHeader({ userEmail, sucursalNombre }: AppHeaderProps) {
+export default function AppHeader({ userEmail, sucursalNombre, periodLabel }: AppHeaderProps) {
+  const pathname = usePathname();
+
+  const initials = userEmail
+    ? userEmail.slice(0, 2).toUpperCase()
+    : "??";
+
   return (
-    <header className="h-14 border-b border-zinc-200 bg-white px-6 flex items-center justify-between flex-shrink-0">
-      <div className="flex items-center gap-3">
-        <div className="h-6 w-6 rounded bg-zinc-950 flex items-center justify-center">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-          </svg>
+    <header
+      className="h-14 flex items-center gap-4 px-5 flex-shrink-0"
+      style={{
+        background: "white",
+        borderBottom: "1px solid rgba(10,10,10,0.08)",
+        fontFamily: "var(--font-sans)",
+      }}
+    >
+      {/* Logo + brand */}
+      <div className="flex items-center gap-2">
+        <div
+          style={{
+            width: 26, height: 26, borderRadius: 7,
+            background: "#0a0a0a", color: "white",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontWeight: 700, fontSize: 13, letterSpacing: "-0.02em",
+            flexShrink: 0,
+          }}
+        >
+          T
         </div>
-        <span className="text-sm font-semibold tracking-tight text-zinc-950">Finanzas</span>
-        {sucursalNombre && (
-          <>
-            <span className="text-zinc-300">/</span>
-            <span className="text-sm text-zinc-500">{sucursalNombre}</span>
-          </>
-        )}
+        <div className="flex items-baseline gap-1.5">
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#0a0a0a", letterSpacing: "-0.01em" }}>
+            terry
+          </span>
+          <span
+            className="terry-tag"
+            style={{
+              background: "oklch(0.96 0.08 85)",
+              color: "oklch(0.45 0.12 75)",
+              letterSpacing: "0.04em",
+              whiteSpace: "nowrap",
+            }}
+          >
+            BETA 1.0
+          </span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        {userEmail && (
-          <span className="text-xs text-zinc-400 hidden sm:block">{userEmail}</span>
-        )}
-        <form action={logout}>
-          <button
-            type="submit"
-            className="text-xs text-zinc-500 hover:text-zinc-950 transition-colors px-3 py-1.5 rounded-md border border-zinc-200 hover:border-zinc-400"
-          >
-            Salir
-          </button>
-        </form>
-      </div>
+      {/* Divider */}
+      <div style={{ width: 1, height: 20, background: "rgba(10,10,10,0.13)" }} />
+
+      {/* Navigation */}
+      <nav className="flex items-center gap-0.5">
+        {NAV.map((item) => {
+          const isActive =
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 6,
+                fontSize: 12.5,
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? "#0a0a0a" : "rgba(10,10,10,0.50)",
+                background: isActive ? "rgba(10,10,10,0.07)" : "transparent",
+                letterSpacing: "-0.005em",
+                transition: "background 0.15s, color 0.15s",
+                textDecoration: "none",
+              }}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Sucursal */}
+      {sucursalNombre && (
+        <span style={{ fontSize: 11.5, color: "rgba(10,10,10,0.50)", fontFamily: "var(--font-mono)" }}>
+          {sucursalNombre}
+        </span>
+      )}
+
+      {/* Period indicator */}
+      {periodLabel && (
+        <div
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            fontSize: 11.5, color: "rgba(10,10,10,0.70)",
+            padding: "5px 10px",
+            border: "1px solid rgba(10,10,10,0.13)", borderRadius: 7,
+            fontFamily: "var(--font-mono)",
+          }}
+        >
+          <span
+            style={{
+              display: "inline-block", width: 6, height: 6,
+              borderRadius: "50%", background: "oklch(0.62 0.15 145)",
+            }}
+          />
+          {periodLabel}
+        </div>
+      )}
+
+      {/* Avatar / logout */}
+      <form action={logout}>
+        <button
+          type="submit"
+          title={`Cerrar sesión · ${userEmail}`}
+          style={{
+            width: 28, height: 28, borderRadius: "50%",
+            background: "#0a0a0a", color: "white",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, fontWeight: 600, letterSpacing: "0.02em",
+            border: "none", cursor: "pointer",
+            transition: "opacity 0.15s",
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.opacity = "0.8")}
+          onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
+        >
+          {initials}
+        </button>
+      </form>
     </header>
   );
 }

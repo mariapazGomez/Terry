@@ -2,25 +2,48 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0a0a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* Terry design tokens */
+  --color-terry-green:       oklch(0.62 0.15 145);
+  --color-terry-green-soft:  oklch(0.94 0.05 145);
+  --color-terry-red:         oklch(0.58 0.19 27);
+  --color-terry-red-soft:    oklch(0.94 0.05 27);
+  --color-terry-yellow:      oklch(0.82 0.15 85);
+  --color-terry-yellow-soft: oklch(0.96 0.08 85);
+  --color-terry-yellow-fg:   oklch(0.45 0.12 75);
+  --color-terry-ink:         #0a0a0a;
+  --color-terry-paper:       #ffffff;
+  --color-terry-bg:          #faf9f7;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer components {
+  .terry-card {
+    background: white;
+    border: 1px solid rgba(10, 10, 10, 0.13);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 6px 18px rgba(0,0,0,0.04);
+  }
+
+  .terry-tag {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    padding: 2px 6px;
+    border-radius: 4px;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }

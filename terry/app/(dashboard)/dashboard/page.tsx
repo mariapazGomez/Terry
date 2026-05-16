@@ -12,6 +12,11 @@ import {
   DistribucionChartWrapper,
 } from "@/components/dashboard/charts-wrapper";
 import TerryPanel from "@/components/dashboard/terry-panel";
+import VentasHoy from "@/components/dashboard/ventas-hoy";
+import Ventas3MesesBars from "@/components/dashboard/ventas-3meses-bars";
+import DashboardGrid from "@/components/dashboard/dashboard-grid";
+import { getComparativa3Meses } from "@/lib/sumup/resumen";
+import { getLayout } from "@/lib/dashboard-layout";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -85,11 +90,13 @@ export default async function DashboardPage({
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
 
-  const [resumen, registros, comparativa, distribucion] = await Promise.all([
+  const [resumen, registros, comparativa, distribucion, comparativa3m, layout] = await Promise.all([
     getResumenMes(anio, mes),
     getRegistrosFinancieros(anio, mes),
     getComparativaMeses(anio, mes, 6),
     getDistribucionEgresos(anio, mes),
+    getComparativa3Meses().catch(() => ({ puntos: [], meses: [] as string[] })),
+    getLayout(),
   ]);
 
   const sinDatos = !resumen || resumen.totalRegistros === 0;
@@ -210,15 +217,9 @@ export default async function DashboardPage({
       {/* ── MAIN CONTENT ─────────────────────────────────────────────────── */}
       <div style={{ padding: "24px 24px", display: "flex", flexDirection: "column", gap: 24, flex: 1 }}>
 
-        {/* ── SALUDO ─────────────────────────────────────────────────────── */}
+        {/* ── SALUDO (siempre visible, no es widget) ─────────────────────── */}
         <div>
-          <div
-            style={{
-              fontSize: 11, color: INK50,
-              fontFamily: "var(--font-mono)", letterSpacing: "0.04em",
-              textTransform: "uppercase", marginBottom: 6,
-            }}
-          >
+          <div style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 6 }}>
             {fechaLabel}
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, color: INK, letterSpacing: "-0.02em" }}>
@@ -231,301 +232,131 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        {sinDatos ? (
-          /* Empty state */
-          <div
-            className="terry-card"
-            style={{
-              padding: "48px 24px", display: "flex", flexDirection: "column",
-              alignItems: "center", textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                width: 44, height: 44, borderRadius: "50%",
-                background: INK08, display: "flex", alignItems: "center", justifyContent: "center",
-                marginBottom: 16,
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={INK50} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" />
-              </svg>
-            </div>
-            <p style={{ fontSize: 14, fontWeight: 600, color: INK }}>Sin datos para este período</p>
-            <p style={{ fontSize: 12, color: INK50, marginTop: 4 }}>
-              No hay registros en{" "}
-              <span style={{ textTransform: "capitalize" }}>{periodoLabel}</span>.
-            </p>
-            <Link
-              href="/dashboard/seed"
-              style={{
-                marginTop: 20, display: "inline-block",
-                padding: "8px 16px", borderRadius: 7,
-                background: INK, color: "white",
-                fontSize: 12, fontWeight: 600, textDecoration: "none",
-              }}
-            >
-              Cargar datos de prueba
-            </Link>
-          </div>
-        ) : (
-          <>
-            {/* ── KPI STRIP ──────────────────────────────────────────────── */}
-            <div>
-              <div
-                style={{
-                  display: "flex", alignItems: "baseline", justifyContent: "space-between",
-                  marginBottom: 12,
-                }}
-              >
-                <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>
-                  Indicadores del mes
-                </span>
-                <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)" }}>
-                  {resumen!.totalRegistros} registros · actualizado
-                </span>
-              </div>
+        {/* ── WIDGETS ACOMODABLES ────────────────────────────────────────── */}
+        <DashboardGrid
+          initialLayout={layout}
+          widgets={{
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-                {[
-                  {
-                    label: "Ingresos del mes",
-                    value: formatCLP(resumen!.ingresos),
-                    delta: `+${((resumen!.ingresos / (resumen!.ingresos || 1)) * 0).toFixed(1)}%`,
-                    rawDelta: null,
-                    tone: "green",
-                    sub: "vs. mes anterior",
-                  },
-                  {
-                    label: "Egresos del mes",
-                    value: formatCLP(resumen!.egresos),
-                    rawDelta: null,
-                    tone: "red",
-                    sub: "incluyendo sueldos",
-                  },
-                  {
-                    label: "Flujo neto",
-                    value: formatCLP(resumen!.balance),
-                    rawDelta: null,
-                    tone: resumen!.balance >= 0 ? "green" : "red",
-                    sub: "ingresos − egresos",
-                  },
-                  {
-                    label: "Margen neto",
-                    value: margen,
-                    rawDelta: null,
-                    tone: resumen!.balance >= 0 ? "green" : "red",
-                    sub: `${resumen!.pendientes} pendientes de pago`,
-                    isMono: false,
-                  },
-                ].map((kpi, i) => {
-                  const isRed   = kpi.tone === "red";
-                  const color   = isRed ? RED : GREEN;
-                  const arrow   = isRed ? "▾" : "▴";
-                  return (
-                    <div
-                      key={i}
-                      className="terry-card"
-                      style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 6 }}
-                    >
-                      <div style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 500 }}>
-                        {kpi.label}
-                      </div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 28, fontWeight: 600, color: INK, letterSpacing: "-0.02em", lineHeight: 1.05 }}>
-                        {kpi.value.startsWith("$") ? (
-                          <>
-                            <span style={{ fontSize: 16, color: INK50, marginRight: 2 }}>$</span>
-                            {kpi.value.slice(1)}
-                          </>
-                        ) : (
-                          kpi.value
-                        )}
-                      </div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: INK50, fontWeight: 400 }}>
-                        {kpi.sub}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            "ventas-hoy": <VentasHoy />,
 
-            {/* ── ANÁLISIS FINANCIERO ────────────────────────────────────── */}
-            <div>
-              <div
-                style={{
-                  display: "flex", alignItems: "baseline", justifyContent: "space-between",
-                  marginBottom: 12,
-                }}
-              >
-                <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>
-                  Análisis financiero
-                </span>
-                <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", textTransform: "capitalize" }}>
-                  {periodoLabel}
-                </span>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14 }}>
-                <div style={{ height: 280 }}>
-                  <TerryPanel title="Flujo de caja" subtitle="últimos 6 meses · CLP" tag="FLUJO" tagTone="ink">
-                    <FlujoLineasChartWrapper data={comparativa} />
-                  </TerryPanel>
+            "comparativa-3m": (
+              <div>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>
+                    Comparativa mensual
+                  </span>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)" }}>
+                    ventas diarias · últimos 3 meses
+                  </span>
                 </div>
-                <div style={{ height: 280 }}>
-                  <TerryPanel title="Composición de egresos" subtitle={periodoLabel} tag="SPLIT" tagTone="ink">
-                    <DistribucionChartWrapper data={distribucion} />
-                  </TerryPanel>
-                </div>
+                <Ventas3MesesBars puntos={comparativa3m.puntos} meses={comparativa3m.meses} />
               </div>
-            </div>
+            ),
 
-            {/* ── VENCIMIENTOS ───────────────────────────────────────────── */}
-            <div>
-              <div
-                style={{
-                  display: "flex", alignItems: "baseline", justifyContent: "space-between",
-                  marginBottom: 12,
-                }}
-              >
-                <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>
-                  Vencimientos
-                </span>
-                <Link
-                  href="/dashboard/registros"
-                  style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", textDecoration: "none" }}
-                >
-                  ver todos →
+            "indicadores-mes": sinDatos ? (
+              <div className="terry-card" style={{ padding: "48px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: INK }}>Sin datos para este período</p>
+                <p style={{ fontSize: 12, color: INK50, marginTop: 4 }}>No hay registros en <span style={{ textTransform: "capitalize" }}>{periodoLabel}</span>.</p>
+                <Link href="/dashboard/seed" style={{ marginTop: 20, display: "inline-block", padding: "8px 16px", borderRadius: 7, background: INK, color: "white", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
+                  Cargar datos de prueba
                 </Link>
               </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14 }}>
-                {/* Tabla cuentas por pagar */}
-                <div style={{ height: 280 }}>
-                  <TerryPanel
-                    title="Cuentas por pagar"
-                    subtitle={`próximos vencimientos · ${pendientes.length} ${pendientes.length === 1 ? "cuenta" : "cuentas"}`}
-                    tag="TABLA"
-                    tagTone="ink"
-                    bodyPadding={0}
-                  >
-                    {pendientes.length === 0 ? (
-                      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-                        <p style={{ fontSize: 12, color: INK30, fontFamily: "var(--font-mono)" }}>Sin vencimientos pendientes</p>
-                      </div>
-                    ) : (
-                      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                        {/* Table header */}
-                        <div
-                          style={{
-                            display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr",
-                            padding: "8px 14px", borderBottom: `1px solid ${INK08}`,
-                            fontFamily: "var(--font-mono)", fontSize: 9.5, fontWeight: 500,
-                            color: INK50, letterSpacing: "0.04em", textTransform: "uppercase",
-                          }}
-                        >
-                          <div>Proveedor</div>
-                          <div style={{ textAlign: "right" }}>Monto</div>
-                          <div style={{ textAlign: "right" }}>Estado</div>
-                        </div>
-
-                        {/* Rows */}
-                        {pendientes.slice(0, 6).map((r, ri) => (
-                          <div
-                            key={r.id}
-                            style={{
-                              display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr",
-                              padding: "8px 14px",
-                              borderBottom: ri < Math.min(pendientes.length, 6) - 1 ? `1px solid ${INK08}` : "none",
-                              fontSize: 11.5, color: INK, alignItems: "center",
-                            }}
-                          >
-                            <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {r.tercero_nombre ?? r.descripcion ?? "—"}
-                            </div>
-                            <div style={{ textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: 500 }}>
-                              {formatCLP(r.monto_total)}
-                            </div>
-                            <div style={{ textAlign: "right" }}>
-                              <span
-                                style={{
-                                  fontFamily: "var(--font-mono)", fontSize: 10,
-                                  padding: "2px 6px", borderRadius: 4,
-                                  background: "oklch(0.96 0.08 85)",
-                                  color: YELLOW_FG,
-                                }}
-                              >
-                                Pendiente
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </TerryPanel>
+            ) : (
+              <div>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>Indicadores del mes</span>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)" }}>{resumen!.totalRegistros} registros · actualizado</span>
                 </div>
-
-                {/* Alerta IVA F29 */}
-                <div style={{ height: 280 }}>
-                  <TerryPanel title="IVA · F29" subtitle={f29Label} tag="ATENCIÓN" tagTone="yellow">
-                    <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 0 }}>
-                      <div
-                        style={{
-                          fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 600,
-                          color: INK, lineHeight: 1.1, letterSpacing: "-0.01em",
-                        }}
-                      >
-                        {Math.max(0, diasF29)}{" "}
-                        <span style={{ fontSize: 12, color: INK50, fontWeight: 400 }}>días</span>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+                  {[
+                    { label: "Ingresos del mes", value: formatCLP(resumen!.ingresos), tone: "green", sub: "vs. mes anterior" },
+                    { label: "Egresos del mes",  value: formatCLP(resumen!.egresos),  tone: "red",   sub: "incluyendo sueldos" },
+                    { label: "Flujo neto",        value: formatCLP(resumen!.balance),  tone: resumen!.balance >= 0 ? "green" : "red", sub: "ingresos − egresos" },
+                    { label: "Margen neto",       value: margen, tone: resumen!.balance >= 0 ? "green" : "red", sub: `${resumen!.pendientes} pendientes de pago` },
+                  ].map((kpi, i) => (
+                    <div key={i} className="terry-card" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 500 }}>{kpi.label}</div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 28, fontWeight: 600, color: INK, letterSpacing: "-0.02em", lineHeight: 1.05 }}>
+                        {kpi.value.startsWith("$") ? <><span style={{ fontSize: 16, color: INK50, marginRight: 2 }}>$</span>{kpi.value.slice(1)}</> : kpi.value}
                       </div>
-                      <div style={{ fontSize: 11.5, color: "rgba(10,10,10,0.70)", marginTop: 8, lineHeight: 1.4 }}>
-                        Declaración de IVA del período {periodoLabel}. Recuerda revisar tus compras antes de declarar.
-                      </div>
-                      <div style={{ marginTop: "auto", paddingTop: 16 }}>
-                        <div style={{ fontSize: 10, color: INK50, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
-                          Estimado a pagar
-                        </div>
-                        <div
-                          style={{
-                            fontFamily: "var(--font-mono)", fontSize: 13,
-                            color: INK, fontWeight: 600,
-                          }}
-                        >
-                          {formatCLP(ivaEstimado)}
-                        </div>
-                        <div style={{ fontSize: 10, color: INK30, fontFamily: "var(--font-mono)", marginTop: 2 }}>
-                          estimación 19% · sujeto a crédito fiscal
-                        </div>
-                      </div>
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: INK50 }}>{kpi.sub}</div>
                     </div>
-                  </TerryPanel>
+                  ))}
                 </div>
               </div>
-            </div>
+            ),
 
-            {/* ── BETA FOOTER ────────────────────────────────────────────── */}
-            <div
-              style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "12px 16px",
-                background: "white",
-                border: `1px dashed ${INK15}`,
-                borderRadius: 10,
-                fontSize: 12, color: "rgba(10,10,10,0.70)",
-              }}
-            >
-              <span
-                className="terry-tag"
-                style={{ background: "oklch(0.96 0.08 85)", color: YELLOW_FG, letterSpacing: "0.04em", whiteSpace: "nowrap" }}
-              >
-                PRÓXIMAMENTE
-              </span>
-              <span>
-                En versiones futuras podrás pedirle a <strong>Terry</strong> que cree paneles personalizados en una pizarra interactiva.
-              </span>
-            </div>
-          </>
-        )}
+            "analisis-financiero": sinDatos ? null : (
+              <div>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>Análisis financiero</span>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", textTransform: "capitalize" }}>{periodoLabel}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14 }}>
+                  <div style={{ height: 280 }}>
+                    <TerryPanel title="Flujo de caja" subtitle="últimos 6 meses · CLP" tag="FLUJO" tagTone="ink">
+                      <FlujoLineasChartWrapper data={comparativa} />
+                    </TerryPanel>
+                  </div>
+                  <div style={{ height: 280 }}>
+                    <TerryPanel title="Composición de egresos" subtitle={periodoLabel} tag="SPLIT" tagTone="ink">
+                      <DistribucionChartWrapper data={distribucion} />
+                    </TerryPanel>
+                  </div>
+                </div>
+              </div>
+            ),
+
+            "vencimientos": sinDatos ? null : (
+              <div>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>Vencimientos</span>
+                  <Link href="/dashboard/registros" style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", textDecoration: "none" }}>ver todos →</Link>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14 }}>
+                  <div style={{ height: 280 }}>
+                    <TerryPanel title="Cuentas por pagar" subtitle={`próximos vencimientos · ${pendientes.length} ${pendientes.length === 1 ? "cuenta" : "cuentas"}`} tag="TABLA" tagTone="ink" bodyPadding={0}>
+                      {pendientes.length === 0 ? (
+                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+                          <p style={{ fontSize: 12, color: INK30, fontFamily: "var(--font-mono)" }}>Sin vencimientos pendientes</p>
+                        </div>
+                      ) : (
+                        <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", padding: "8px 14px", borderBottom: `1px solid ${INK08}`, fontFamily: "var(--font-mono)", fontSize: 9.5, fontWeight: 500, color: INK50, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                            <div>Proveedor</div><div style={{ textAlign: "right" }}>Monto</div><div style={{ textAlign: "right" }}>Estado</div>
+                          </div>
+                          {pendientes.slice(0, 6).map((r, ri) => (
+                            <div key={r.id} style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", padding: "8px 14px", borderBottom: ri < Math.min(pendientes.length, 6) - 1 ? `1px solid ${INK08}` : "none", fontSize: 11.5, color: INK, alignItems: "center" }}>
+                              <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.tercero_nombre ?? r.descripcion ?? "—"}</div>
+                              <div style={{ textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: 500 }}>{formatCLP(r.monto_total)}</div>
+                              <div style={{ textAlign: "right" }}><span style={{ fontFamily: "var(--font-mono)", fontSize: 10, padding: "2px 6px", borderRadius: 4, background: "oklch(0.96 0.08 85)", color: YELLOW_FG }}>Pendiente</span></div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </TerryPanel>
+                  </div>
+                  <div style={{ height: 280 }}>
+                    <TerryPanel title="IVA · F29" subtitle={f29Label} tag="ATENCIÓN" tagTone="yellow">
+                      <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 0 }}>
+                        <div style={{ fontFamily: "var(--font-mono)", fontSize: 22, fontWeight: 600, color: INK, lineHeight: 1.1, letterSpacing: "-0.01em" }}>
+                          {Math.max(0, diasF29)} <span style={{ fontSize: 12, color: INK50, fontWeight: 400 }}>días</span>
+                        </div>
+                        <div style={{ fontSize: 11.5, color: "rgba(10,10,10,0.70)", marginTop: 8, lineHeight: 1.4 }}>Declaración de IVA del período {periodoLabel}. Recuerda revisar tus compras antes de declarar.</div>
+                        <div style={{ marginTop: "auto", paddingTop: 16 }}>
+                          <div style={{ fontSize: 10, color: INK50, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Estimado a pagar</div>
+                          <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: INK, fontWeight: 600 }}>{formatCLP(ivaEstimado)}</div>
+                          <div style={{ fontSize: 10, color: INK30, fontFamily: "var(--font-mono)", marginTop: 2 }}>estimación 19% · sujeto a crédito fiscal</div>
+                        </div>
+                      </div>
+                    </TerryPanel>
+                  </div>
+                </div>
+              </div>
+            ),
+
+          }}
+        />
       </div>
     </div>
   );

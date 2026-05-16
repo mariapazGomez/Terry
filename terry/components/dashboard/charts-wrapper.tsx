@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState, type ComponentType } from "react";
+import dynamic from "next/dynamic";
+import type { PuntoSemana, PuntoMes } from "@/lib/sumup/resumen";
 
 type MesData = { label: string; ingresos: number; egresos: number };
 type CategoriaEgreso = { nombre: string; monto: number };
@@ -13,32 +14,40 @@ function ChartSkeleton({ height }: { height: number }) {
   );
 }
 
+const FlujoLineasChart = dynamic(() => import("./flujo-lineas-chart"), {
+  ssr: false,
+  loading: () => <ChartSkeleton height={190} />,
+});
+
+const DistribucionChart = dynamic(() => import("./distribucion-chart"), {
+  ssr: false,
+  loading: () => <ChartSkeleton height={120} />,
+});
+
+const VentasSemanasChart = dynamic(() => import("./ventas-semanas-chart"), {
+  ssr: false,
+  loading: () => <ChartSkeleton height={220} />,
+});
+
+const VentasMesChart = dynamic(() => import("./ventas-mes-chart"), {
+  ssr: false,
+  loading: () => <ChartSkeleton height={220} />,
+});
+
 export function FlujoLineasChartWrapper({ data }: { data: MesData[] }) {
-  const [Chart, setChart] = useState<ComponentType<{ data: MesData[] }> | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    import("./flujo-lineas-chart").then((mod) => {
-      if (!cancelled) setChart(() => mod.default);
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  if (!Chart) return <ChartSkeleton height={190} />;
-  return <Chart data={data} />;
+  return <FlujoLineasChart data={data} />;
 }
 
 export function DistribucionChartWrapper({ data }: { data: CategoriaEgreso[] }) {
-  const [Chart, setChart] = useState<ComponentType<{ data: CategoriaEgreso[] }> | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    import("./distribucion-chart").then((mod) => {
-      if (!cancelled) setChart(() => mod.default);
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  if (!Chart) return <ChartSkeleton height={120} />;
-  return <Chart data={data} />;
+  return <DistribucionChart data={data} />;
 }
+
+export function VentasSemanasChartWrapper({ data, labels }: { data: PuntoSemana[]; labels: string[] }) {
+  return <VentasSemanasChart data={data} labels={labels} />;
+}
+
+export function VentasMesChartWrapper({ data }: { data: PuntoMes[] }) {
+  return <VentasMesChart data={data} />;
+}
+
+

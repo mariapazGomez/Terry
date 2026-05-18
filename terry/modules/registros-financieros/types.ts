@@ -1,5 +1,5 @@
 export type TipoRegistro = 'ingreso' | 'gasto'
 export type EstadoRegistro = 'pendiente' | 'pagado'
 export type TipoDocumento = 'factura' | 'boleta' | 'nota_credito' | 'nota_debito' | 'liquidacion' | 'sin_documento'
-export type TipoGasto = 'factura_proveedor' | 'salario' | 'arriendo' | 'subscripcion' | 'otro'
+export type TipoGasto = 'factura_proveedor' | 'salario' | 'arriendo' | 'credito' | 'subscripcion' | 'servicio_basico' | 'otro'
 export type FuenteRegistro = 'manual' | 'sumup'

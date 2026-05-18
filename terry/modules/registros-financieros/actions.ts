@@ -80,6 +80,50 @@ export async function crearRegistroFinanciero(formData: FormData) {
   revalidatePath("/dashboard/registros");
 }
 
+export async function crearGasto(formData: FormData) {
+  const supabase = await createClient()
+  const contexto = await getContextoUsuario()
+  if (!contexto.sucursalActiva) throw new Error("No hay sucursal activa")
+
+  const monto = Math.abs(Number(formData.get("monto_total")))
+  if (!monto) throw new Error("Monto requerido")
+
+  const { error } = await supabase.from("registros_financieros").insert({
+    organizacion_id: contexto.organizacionId,
+    sucursal_id:     contexto.sucursalActiva.id,
+    creado_por:      contexto.user.id,
+    tipo_registro:   "gasto",
+    fuente:          "manual",
+    estado:          String(formData.get("estado") || "pendiente"),
+    tipo_gasto:      String(formData.get("tipo_gasto") || "otro"),
+    fecha_emision:   String(formData.get("fecha_emision")),
+    moneda:          "CLP",
+    descripcion:     String(formData.get("descripcion") || ""),
+    tercero_nombre:  String(formData.get("tercero_nombre") || "") || null,
+    monto_neto:      monto,
+    monto_impuesto:  0,
+    monto_total:     monto,
+  })
+
+  if (error) throw new Error(error.message)
+  revalidatePath("/dashboard/gastos")
+  revalidatePath("/dashboard")
+}
+
+export async function marcarGastoPagado(formData: FormData) {
+  const supabase = await createClient()
+  const id = String(formData.get("id"))
+
+  const { error } = await supabase
+    .from("registros_financieros")
+    .update({ estado: "pagado" })
+    .eq("id", id)
+
+  if (error) throw new Error(error.message)
+  revalidatePath("/dashboard/gastos")
+  revalidatePath("/dashboard")
+}
+
 export async function marcarComoPagado(formData: FormData) {
   const supabase = await createClient();
 

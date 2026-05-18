@@ -4,7 +4,9 @@ export type TipoGasto =
   | 'factura_proveedor'
   | 'salario'
   | 'arriendo'
+  | 'credito'
   | 'subscripcion'
+  | 'servicio_basico'
   | 'otro'
 
 export type GastoRecurrente = {

@@ -13,7 +13,9 @@ export const TIPOS_GASTO = [
   'factura_proveedor',
   'salario',
   'arriendo',
+  'credito',
   'subscripcion',
+  'servicio_basico',
   'otro',
 ] as const
 

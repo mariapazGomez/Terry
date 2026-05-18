@@ -15,8 +15,10 @@ import TerryPanel from "@/components/dashboard/terry-panel";
 import VentasHoy from "@/components/dashboard/ventas-hoy";
 import Ventas3MesesBars from "@/components/dashboard/ventas-3meses-bars";
 import DashboardGrid from "@/components/dashboard/dashboard-grid";
-import { getComparativa3Meses } from "@/lib/sumup/resumen";
+import { getComparativa3Meses, getVentasMes } from "@/lib/sumup/resumen";
 import { getLayout } from "@/lib/dashboard-layout";
+import ActualizarDatosButton from "@/components/dashboard/actualizar-datos-button";
+import BalanceMes from "@/components/dashboard/balance-mes";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -90,13 +92,14 @@ export default async function DashboardPage({
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
 
-  const [resumen, registros, comparativa, distribucion, comparativa3m, layout] = await Promise.all([
+  const [resumen, registros, comparativa, distribucion, comparativa3m, layout, ventasMes] = await Promise.all([
     getResumenMes(anio, mes),
     getRegistrosFinancieros(anio, mes),
     getComparativaMeses(anio, mes, 6),
     getDistribucionEgresos(anio, mes),
     getComparativa3Meses().catch(() => ({ puntos: [], meses: [] as string[] })),
     getLayout(),
+    getVentasMes(anio, mes).catch(() => 0),
   ]);
 
   const sinDatos = !resumen || resumen.totalRegistros === 0;
@@ -188,30 +191,34 @@ export default async function DashboardPage({
           )}
         </div>
 
-        {/* Selector sucursal */}
-        {contexto.sucursales.length > 1 && (
-          <form
-            action={async (fd) => {
-              "use server";
-              await setSucursalActiva(String(fd.get("sucursal_id") ?? ""));
-            }}
-          >
-            <select
-              name="sucursal_id"
-              defaultValue={contexto.sucursalActiva?.id}
-              style={{
-                border: `1px solid ${INK15}`, borderRadius: 7,
-                padding: "5px 10px", fontSize: 12, color: INK,
-                background: "white", fontFamily: "var(--font-sans)",
-                outline: "none", cursor: "pointer",
+        {/* Controles derechos */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <ActualizarDatosButton />
+
+          {contexto.sucursales.length > 1 && (
+            <form
+              action={async (fd) => {
+                "use server";
+                await setSucursalActiva(String(fd.get("sucursal_id") ?? ""));
               }}
             >
-              {contexto.sucursales.map((s) => (
-                <option key={s.id} value={s.id}>{s.nombre}</option>
-              ))}
-            </select>
-          </form>
-        )}
+              <select
+                name="sucursal_id"
+                defaultValue={contexto.sucursalActiva?.id}
+                style={{
+                  border: `1px solid ${INK15}`, borderRadius: 7,
+                  padding: "5px 10px", fontSize: 12, color: INK,
+                  background: "white", fontFamily: "var(--font-sans)",
+                  outline: "none", cursor: "pointer",
+                }}
+              >
+                {contexto.sucursales.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
+              </select>
+            </form>
+          )}
+        </div>
       </div>
 
       {/* ── MAIN CONTENT ─────────────────────────────────────────────────── */}
@@ -238,6 +245,14 @@ export default async function DashboardPage({
           widgets={{
 
             "ventas-hoy": <VentasHoy />,
+
+            "balance-mes": (
+              <BalanceMes
+                ventasMes={ventasMes}
+                gastosMes={resumen?.egresos ?? 0}
+                periodo={periodoLabel}
+              />
+            ),
 
             "comparativa-3m": (
               <div>

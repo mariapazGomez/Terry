@@ -7,7 +7,7 @@ export async function getGastosRecurrentes() {
 
   const { data, error } = await supabase
     .from('gastos_recurrentes')
-    .select('*, proveedores(nombre), categorias(nombre)')
+    .select('*')
     .eq('organizacion_id', organizacionId)
     .eq('activo', true)
     .order('nombre')

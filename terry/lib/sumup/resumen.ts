@@ -18,6 +18,20 @@ export type ComparativaDiaria = {
 }
 
 
+export async function getVentasMes(anio: number, mes: number): Promise<number> {
+  const supabase = createServiceClient()
+  const mesStr   = `${anio}-${String(mes).padStart(2, "0")}`
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (supabase as any)
+    .from("sumup_snapshot_dia")
+    .select("total")
+    .gte("fecha", `${mesStr}-01`)
+    .lte("fecha", `${mesStr}-31`)
+
+  return (data ?? []).reduce((s: number, d: { total: number }) => s + Number(d.total ?? 0), 0)
+}
+
 export async function getComparativa3Meses(): Promise<ComparativaDiaria> {
   const supabase = createServiceClient()
 

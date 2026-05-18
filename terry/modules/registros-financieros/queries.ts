@@ -160,6 +160,28 @@ export async function getDistribucionEgresos(anio: number, mes: number) {
     .map(([nombre, monto]) => ({ nombre, monto }));
 }
 
+export async function getGastosDelMes(anio: number, mes: number) {
+  const supabase = await createClient()
+  const contexto = await getContextoUsuario()
+  if (!contexto.sucursalActiva) return []
+
+  const inicio = new Date(anio, mes - 1, 1).toISOString().split("T")[0]
+  const fin    = new Date(anio, mes, 0).toISOString().split("T")[0]
+
+  const { data, error } = await supabase
+    .from("registros_financieros")
+    .select("id, descripcion, tercero_nombre, tipo_gasto, estado, monto_total, moneda, fecha_emision, gasto_recurrente_id")
+    .eq("sucursal_id", contexto.sucursalActiva.id)
+    .eq("tipo_registro", "gasto")
+    .gte("fecha_emision", inicio)
+    .lte("fecha_emision", fin)
+    .order("tipo_gasto", { ascending: true })
+    .order("descripcion", { ascending: true })
+
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
 export async function getRegistrosFinancieros(anio?: number, mes?: number) {
   const supabase = await createClient();
   const contexto = await getContextoUsuario();

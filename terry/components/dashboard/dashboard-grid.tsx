@@ -14,6 +14,7 @@ import type { WidgetConfig } from "@/lib/dashboard-layout-types"
 
 const LABELS: Record<string, string> = {
   "ventas-hoy":          "Ventas de hoy",
+  "balance-mes":         "Balance del mes",
   "comparativa-3m":      "Comparativa 3 meses",
   "indicadores-mes":     "Indicadores del mes",
   "analisis-financiero": "Análisis financiero",

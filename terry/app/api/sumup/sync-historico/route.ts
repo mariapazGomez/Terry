@@ -26,7 +26,8 @@ export async function POST(request: Request) {
   let paginas = 0
 
   while (nextQuery) {
-    const res = await fetch(`${BASE}?${nextQuery}`, { headers, cache: "no-store" })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res: Response = await fetch(`${BASE}?${nextQuery}`, { headers, cache: "no-store" })
 
     if (!res.ok) {
       const err = await res.text()
@@ -34,11 +35,12 @@ export async function POST(request: Request) {
       return Response.json({ error: "Error al consultar SumUp" }, { status: 500 })
     }
 
-    const data = await res.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: { items?: any[]; links?: { rel: string; href: string }[] } = await res.json()
     allItems.push(...(data.items ?? []))
     paginas++
 
-    const next = (data.links ?? []).find((l: { rel: string }) => l.rel === "next")
+    const next = (data.links ?? []).find((l) => l.rel === "next")
     nextQuery = next?.href ?? null
   }
 

@@ -30,8 +30,15 @@ function labelPago(payment_type: string, card_type?: string | null) {
 }
 
 function inicioHoySantiago(): string {
-  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date())
-  return new Date(`${hoy}T00:00:00-04:00`).toISOString()
+  const now = new Date()
+  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(now)
+  // Detecta el offset real de America/Santiago (varía con horario de verano)
+  const noonUTC = new Date(`${hoy}T12:00:00Z`)
+  const noonHourSantiago = parseInt(
+    new Intl.DateTimeFormat("en-US", { timeZone: "America/Santiago", hour: "numeric", hour12: false }).format(noonUTC)
+  )
+  const offsetHours = noonHourSantiago - 12   // -3 en invierno, -4 en verano
+  return new Date(new Date(`${hoy}T00:00:00Z`).getTime() - offsetHours * 3_600_000).toISOString()
 }
 
 type Tx = {
@@ -48,6 +55,7 @@ const MAX_TX_PREVIEW = 6
 export default async function VentasHoy() {
   const supabase = createServiceClient()
 
+  // Fetcha todas las tx de hoy (sin límite) para que el KPI y la tabla sean consistentes
   const [resumen, txData] = await Promise.all([
     getResumenVentas(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,12 +65,17 @@ export default async function VentasHoy() {
       .eq("status", "SUCCESSFUL")
       .gte("timestamp", inicioHoySantiago())
       .order("timestamp", { ascending: false })
-      .limit(MAX_TX_PREVIEW + 1),
+      .limit(200),
   ])
 
   const txsHoy: Tx[] = txData.data ?? []
-  const hayMas = txsHoy.length > MAX_TX_PREVIEW
-  const txsVista = txsHoy.slice(0, MAX_TX_PREVIEW)
+
+  // Totales derivados directo del query — evita discrepancias por formato de timestamp
+  const totalHoy  = txsHoy.reduce((s, t) => s + Number(t.amount), 0)
+  const countHoy  = txsHoy.length
+
+  const hayMas    = countHoy > MAX_TX_PREVIEW
+  const txsVista  = txsHoy.slice(0, MAX_TX_PREVIEW)
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -80,9 +93,9 @@ export default async function VentasHoy() {
       {/* ── KPI strip: Hoy / Semana / Mes ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
         {[
-          { label: "Hoy",           value: resumen.totalHoy,    sub: `${resumen.countHoy} transacciones`, highlight: true },
-          { label: "Esta semana",   value: resumen.totalSemana, sub: "lunes a hoy" },
-          { label: "Mes acumulado", value: resumen.totalMes,    sub: "mes en curso" },
+          { label: "Hoy",           value: totalHoy,              sub: `${countHoy} transacciones`, highlight: true },
+          { label: "Esta semana",   value: resumen.totalSemana,   sub: "lunes a hoy" },
+          { label: "Mes acumulado", value: resumen.totalMes,      sub: "mes en curso" },
         ].map(({ label, value, sub, highlight }) => (
           <div key={label} className="terry-card" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 500 }}>
@@ -107,7 +120,7 @@ export default async function VentasHoy() {
           color: INK50, letterSpacing: "0.04em", textTransform: "uppercase",
         }}>
           <span>Transacciones de hoy</span>
-          <span style={{ fontWeight: 400 }}>{resumen.countHoy} ventas</span>
+          <span style={{ fontWeight: 400 }}>{countHoy} ventas</span>
         </div>
 
         {txsVista.length === 0 ? (
@@ -118,7 +131,6 @@ export default async function VentasHoy() {
           </div>
         ) : (
           <>
-            {/* Column headers */}
             <div style={{
               display: "grid", gridTemplateColumns: "55px 1fr 110px 90px",
               padding: "7px 14px", borderBottom: `1px solid ${INK08}`,

@@ -12,6 +12,15 @@ const MESES_NOMBRE = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","
 function fechaSantiago(iso: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(iso))
 }
+function inicioHoySantiago(hoy: string): string {
+  // Detecta el offset real (varía con horario de verano: UTC-3 invierno, UTC-4 verano)
+  const noonUTC = new Date(`${hoy}T12:00:00Z`)
+  const noonH   = parseInt(
+    new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric", hour12: false }).format(noonUTC)
+  )
+  const offsetH = noonH - 12   // -3 en invierno, -4 en verano
+  return new Date(new Date(`${hoy}T00:00:00Z`).getTime() - offsetH * 3_600_000).toISOString()
+}
 function dowIndex(fecha: string): number {
   const dow = new Date(`${fecha}T12:00:00-04:00`).getDay()
   return dow === 0 ? 6 : dow - 1
@@ -39,7 +48,7 @@ export async function sincronizarHoy(): Promise<void> {
       ? (Date.now() - new Date(snap.generado_en).getTime()) / 60_000
       : 999
 
-    if (minAgo < THROTTLE_MIN) return   // dato fresco, no es necesario
+    if (minAgo < THROTTLE_MIN) return
 
     // ── 1. Sync incremental desde SumUp ──────────────────────────────────────
     const { data: ultima } = await supabase
@@ -95,7 +104,7 @@ export async function sincronizarHoy(): Promise<void> {
       .from("sumup_transacciones")
       .select("amount")
       .eq("status", "SUCCESSFUL")
-      .gte("timestamp", `${hoy}T00:00:00-04:00`)
+      .gte("timestamp", inicioHoySantiago(hoy))
 
     const total  = (txsHoy ?? []).reduce((s: number, t: { amount: number }) => s + t.amount, 0)
     const diaNum = parseInt(hoy.split("-")[2])

@@ -17,6 +17,7 @@ import Ventas3MesesBars from "@/components/dashboard/ventas-3meses-bars";
 import DashboardGrid from "@/components/dashboard/dashboard-grid";
 import { getComparativa3Meses, getVentasMes } from "@/lib/sumup/resumen";
 import { getLayout } from "@/lib/dashboard-layout";
+import { sincronizarHoy } from "@/lib/sumup/auto-sync";
 import ActualizarDatosButton from "@/components/dashboard/actualizar-datos-button";
 import BalanceMes from "@/components/dashboard/balance-mes";
 
@@ -74,6 +75,9 @@ export default async function DashboardPage({
     (sig.anio === ahora.getFullYear() && sig.mes > ahora.getMonth() + 1);
 
   const contexto = await getContextoUsuario();
+
+  // Auto-sync: actualiza transacciones y snapshot de hoy (throttled a 5 min)
+  await sincronizarHoy();
 
   // Nombre para el saludo
   const nombre =

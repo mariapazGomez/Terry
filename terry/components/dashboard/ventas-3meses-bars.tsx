@@ -56,6 +56,12 @@ export default function Ventas3MesesBars({
     }
   }
 
+  // Escala compartida: el eje Y usa el máximo global para que los meses sean comparables
+  const maxValGlobal = Math.max(
+    ...Object.values(byMes).flatMap(info => Object.values(info.dias).map(d => d.total)),
+    1
+  )
+
   if (meses.length === 0) {
     return (
       <div className="terry-card" style={{
@@ -109,7 +115,6 @@ export default function Ventas3MesesBars({
         {meses.map((mes, mi) => {
           const info    = byMes[mes]
           const maxDia  = Math.max(info.numDias, 28)
-          const maxVal  = Math.max(...Object.values(info.dias).map(d => d.total), 1)
           const prev    = mi > 0 ? byMes[meses[mi - 1]] : null
           const delta   = prev && prev.total > 0
             ? ((info.total - prev.total) / prev.total) * 100
@@ -154,7 +159,7 @@ export default function Ventas3MesesBars({
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 1.5, height: 80 }}>
                   {Array.from({ length: maxDia }, (_, i) => i + 1).map((diaNum) => {
                     const d   = info.dias[diaNum]
-                    const pct = d ? Math.max((d.total / maxVal) * 100, 3) : 0
+                    const pct = d ? Math.max((d.total / maxValGlobal) * 100, 3) : 0
 
                     return (
                       <div key={diaNum} className="dia-col">

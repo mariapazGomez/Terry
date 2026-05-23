@@ -13,9 +13,9 @@ export type WidgetConfig = {
 
 export const DEFAULT_LAYOUT: WidgetConfig[] = [
   { id: "ventas-hoy",          visible: true },
+  { id: "indicadores-mes",     visible: true },
+  { id: "vencimientos",        visible: true },
   { id: "balance-mes",         visible: true },
   { id: "comparativa-3m",      visible: true },
-  { id: "indicadores-mes",     visible: true },
   { id: "analisis-financiero", visible: true },
-  { id: "vencimientos",        visible: true },
 ]

@@ -14,17 +14,8 @@ export function FooterCta() {
           </h2>
           <div className="d-cta-row">
             <a href="#waitlist" className="d-btn d-btn-primary">
-              Unirme al piloto · $9 USD/mes <span className="d-arrow">→</span>
+              Unirme al piloto <span className="d-arrow">→</span>
             </a>
-            <a href="mailto:hola@terry.cl" className="d-btn d-btn-secondary">Hablar con un fundador</a>
-          </div>
-
-          <div className="d-price-strip" style={{ marginTop: 40 }}>
-            <span><strong>Solo · $19</strong> /mes · 1 sucursal</span>
-            <span>·</span>
-            <span><strong>Pro · $39</strong> /mes · hasta 5 usuarios</span>
-            <span>·</span>
-            <span><strong>Multi-local · $29</strong> /sucursal</span>
           </div>
 
           <div className="d-footer-row">
@@ -35,10 +26,6 @@ export function FooterCta() {
             <div className="d-footer-col">
               <span className="lab">Etapa</span>
               <span className="val">Pre-revenue · piloto activo</span>
-            </div>
-            <div className="d-footer-col">
-              <span className="lab">Contacto</span>
-              <span className="val">hola@terry.cl</span>
             </div>
             <div className="d-footer-col" style={{ alignItems: "flex-end" }}>
               <span className="lab">© 2026</span>
@@ -57,7 +44,7 @@ export function FooterCta() {
               Sé de los primeros<br />en probarlo.
             </h2>
             <p className="d-lead" style={{ color: "rgba(255,255,255,0.55)", marginTop: 16 }}>
-              Acceso anticipado con precio piloto: $9–15 USD/mes los primeros 2 meses.
+              Cupos limitados. Sé parte del piloto y ayúdanos a construir el agente financiero que tu negocio necesita.
             </p>
           </div>
           <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 24, padding: "40px" }}>

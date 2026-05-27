@@ -1,16 +1,13 @@
 const sources: [string, string, "ok" | "soon"][] = [
   ["SumUp",         "POS",       "ok"],
-  ["Square",        "POS",       "ok"],
-  ["Toteat",        "POS",       "soon"],
-  ["Banco Estado",  "Banco",     "ok"],
+  ["Excel",         "Planillas", "ok"],
+  ["Email",         "Canal",     "ok"],
+  ["Banco Estado",  "Banco",     "soon"],
   ["Banco de Chile","Banco",     "soon"],
   ["BCI",           "Banco",     "soon"],
-  ["SII",           "Facturas",  "ok"],
-  ["Defontana",     "ERP",       "soon"],
+  ["SII",           "Facturas",  "soon"],
   ["Nubox",         "Contable",  "soon"],
-  ["Excel",         "Planillas", "ok"],
-  ["WhatsApp",      "Canal",     "ok"],
-  ["Email",         "Canal",     "ok"],
+  ["WhatsApp",      "Canal",     "soon"],
 ];
 
 export function Integraciones() {
@@ -40,7 +37,7 @@ export function Integraciones() {
           ))}
         </div>
         <p className="d-body-sm d-mono" style={{ marginTop: 20, textAlign: "center" }}>
-          12 fuentes hoy · El catálogo crece con cada piloto.
+          3 activas hoy · El catálogo crece con cada piloto.
         </p>
       </div>
     </section>

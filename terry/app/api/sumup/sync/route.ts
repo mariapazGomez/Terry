@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service-client"
-import { getValidSumupToken } from "@/lib/sumup/tokens"
+import { getValidSumupToken, forceRefreshSumupToken } from "@/lib/sumup/tokens"
 
 const ORG_ID     = process.env.TELEGRAM_ORG_ID!
 const SUCURSAL_ID = process.env.TELEGRAM_SUCURSAL_ID!
@@ -25,14 +25,23 @@ export async function POST() {
     params.set("oldest_time", ultima.timestamp)
   }
 
-  const token = await getValidSumupToken()
-  const res = await fetch(
-    `https://api.sumup.com/v0.1/me/transactions/history?${params}`,
-    {
+  const SUMUP_URL = `https://api.sumup.com/v0.1/me/transactions/history?${params}`
+
+  let token = await getValidSumupToken()
+  let res   = await fetch(SUMUP_URL, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  })
+
+  // Retry una vez con token forzado si SumUp devuelve 401
+  if (res.status === 401) {
+    console.warn("[sumup/sync] 401 recibido — forzando refresh de token")
+    token = await forceRefreshSumupToken()
+    res   = await fetch(SUMUP_URL, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
-    }
-  )
+    })
+  }
 
   if (!res.ok) {
     const err = await res.text()

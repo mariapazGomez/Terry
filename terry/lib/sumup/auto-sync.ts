@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service-client"
-import { getValidSumupToken }  from "@/lib/sumup/tokens"
+import { getValidSumupToken, forceRefreshSumupToken } from "@/lib/sumup/tokens"
 
 const TZ           = "America/Santiago"
 const SUMUP_BASE   = "https://api.sumup.com/v0.1/me/transactions/history"
@@ -58,17 +58,26 @@ export async function sincronizarHoy(): Promise<void> {
       .limit(1)
       .maybeSingle()
 
-    const token  = await getValidSumupToken()
+    let token  = await getValidSumupToken()
     const params = new URLSearchParams({
       limit:       "100",
       order:       "ascending",
       oldest_time: ultima?.timestamp ?? `${hoy}T00:00:00.000Z`,
     })
 
-    const res: Response = await fetch(`${SUMUP_BASE}?${params}`, {
+    const url = `${SUMUP_BASE}?${params}`
+    let res: Response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
       cache:   "no-store",
     })
+
+    if (res.status === 401) {
+      token = await forceRefreshSumupToken()
+      res   = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache:   "no-store",
+      })
+    }
 
     if (res.ok) {
       const body: { items?: { timestamp: string; [k: string]: unknown }[] } = await res.json()

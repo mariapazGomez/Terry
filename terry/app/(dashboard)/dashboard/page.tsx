@@ -3,14 +3,10 @@ import { getContextoUsuario } from "@/lib/contexto-usuario";
 import {
   getResumenMes,
   getRegistrosFinancieros,
-  getComparativaMeses,
   getDistribucionEgresos,
 } from "@/modules/registros-financieros/queries";
 import { setSucursalActiva } from "@/app/actions/set-sucursal-activa";
-import {
-  FlujoLineasChartWrapper,
-  DistribucionChartWrapper,
-} from "@/components/dashboard/charts-wrapper";
+import { DistribucionChartWrapper } from "@/components/dashboard/charts-wrapper";
 import TerryPanel from "@/components/dashboard/terry-panel";
 import VentasHoy from "@/components/dashboard/ventas-hoy";
 import Ventas3MesesBars from "@/components/dashboard/ventas-3meses-bars";
@@ -20,12 +16,13 @@ import { getLayout } from "@/lib/dashboard-layout";
 import { sincronizarHoy } from "@/lib/sumup/auto-sync";
 import ActualizarDatosButton from "@/components/dashboard/actualizar-datos-button";
 import BalanceMes from "@/components/dashboard/balance-mes";
+import AcumuladoMeses from "@/components/dashboard/acumulado-meses";
+import VentasHora from "@/components/dashboard/ventas-hora";
+import { getVentasPorHoraSemanas, getHeatmapMes } from "@/lib/sumup/analytics";
+import HeatmapHoraDia from "@/components/dashboard/heatmap-hora-dia";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const GREEN  = "oklch(0.62 0.15 145)";
-const RED    = "oklch(0.58 0.19 27)";
-const YELLOW = "oklch(0.82 0.15 85)";
 const YELLOW_FG = "oklch(0.45 0.12 75)";
 const INK    = "#0a0a0a";
 const INK50  = "rgba(10,10,10,0.52)";
@@ -41,38 +38,12 @@ function formatCLP(n: number): string {
   return new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(n);
 }
 
-function mesAnterior(a: number, m: number) {
-  return m === 1 ? { anio: a - 1, mes: 12 } : { anio: a, mes: m - 1 };
-}
-function mesSiguiente(a: number, m: number) {
-  return m === 12 ? { anio: a + 1, mes: 1 } : { anio: a, mes: m + 1 };
-}
-function mesUrl(a: number, m: number) {
-  return `/dashboard?anio=${a}&mes=${m}`;
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ anio?: string; mes?: string }>;
-}) {
-  const params   = await searchParams;
-  const ahora    = new Date();
-
-  const anioDefault = ahora.getMonth() === 0 ? ahora.getFullYear() - 1 : ahora.getFullYear();
-  const mesDefault  = ahora.getMonth() === 0 ? 12 : ahora.getMonth();
-
-  const anio = params.anio ? parseInt(params.anio) : anioDefault;
-  const mes  = params.mes  ? parseInt(params.mes)  : mesDefault;
-
-  const esActual = anio === ahora.getFullYear() && mes === ahora.getMonth() + 1;
-  const ant = mesAnterior(anio, mes);
-  const sig = mesSiguiente(anio, mes);
-  const esFuturo =
-    sig.anio > ahora.getFullYear() ||
-    (sig.anio === ahora.getFullYear() && sig.mes > ahora.getMonth() + 1);
+export default async function DashboardPage() {
+  const ahora = new Date();
+  const anio  = ahora.getFullYear();
+  const mes   = ahora.getMonth() + 1;
 
   const contexto = await getContextoUsuario();
 
@@ -96,22 +67,18 @@ export default async function DashboardPage({
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
 
-  const [resumen, registros, comparativa, distribucion, comparativa3m, layout, ventasMes] = await Promise.all([
+  const [resumen, registros, distribucion, comparativa3m, layout, ventasMes, ventasHora, ventasHeatmap] = await Promise.all([
     getResumenMes(anio, mes),
     getRegistrosFinancieros(anio, mes),
-    getComparativaMeses(anio, mes, 6),
     getDistribucionEgresos(anio, mes),
     getComparativa3Meses().catch(() => ({ puntos: [], meses: [] as string[] })),
     getLayout(),
     getVentasMes(anio, mes).catch(() => 0),
+    getVentasPorHoraSemanas(4).catch(() => []),
+    getHeatmapMes(anio, mes).catch(() => []),
   ]);
 
   const sinDatos = !resumen || resumen.totalRegistros === 0;
-
-  const margen =
-    resumen && resumen.ingresos > 0
-      ? `${((resumen.balance / resumen.ingresos) * 100).toFixed(1)}%`
-      : "—";
 
   // Registros pendientes
   const pendientes = registros.filter((r) => r.estado !== "pagado");
@@ -131,115 +98,51 @@ export default async function DashboardPage({
   return (
     <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
 
-      {/* ── PERIOD NAV BAR ────────────────────────────────────────────────── */}
-      <div
-        style={{
-          background: "white",
-          borderBottom: `1px solid ${INK15}`,
-          padding: "10px 24px",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {/* Chevron left */}
-          <Link
-            href={mesUrl(ant.anio, ant.mes)}
-            style={{
-              width: 28, height: 28, borderRadius: 6,
-              border: `1px solid ${INK15}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: INK50, textDecoration: "none", transition: "background 0.15s",
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </Link>
-
-          <span
-            style={{
-              fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 500,
-              color: INK, minWidth: "8rem", textAlign: "center",
-              textTransform: "capitalize",
-            }}
-          >
-            {periodoLabel}
-          </span>
-
-          {!esFuturo ? (
-            <Link
-              href={mesUrl(sig.anio, sig.mes)}
-              style={{
-                width: 28, height: 28, borderRadius: 6,
-                border: `1px solid ${INK15}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: INK50, textDecoration: "none",
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </Link>
-          ) : (
-            <div style={{ width: 28 }} />
-          )}
-
-          {esActual && (
-            <span
-              className="terry-tag"
-              style={{ background: INK08, color: INK50 }}
-            >
-              en curso
-            </span>
-          )}
-        </div>
-
-        {/* Controles derechos */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <ActualizarDatosButton />
-
-          {contexto.sucursales.length > 1 && (
-            <form
-              action={async (fd) => {
-                "use server";
-                await setSucursalActiva(String(fd.get("sucursal_id") ?? ""));
-              }}
-            >
-              <select
-                name="sucursal_id"
-                defaultValue={contexto.sucursalActiva?.id}
-                style={{
-                  border: `1px solid ${INK15}`, borderRadius: 7,
-                  padding: "5px 10px", fontSize: 12, color: INK,
-                  background: "white", fontFamily: "var(--font-sans)",
-                  outline: "none", cursor: "pointer",
-                }}
-              >
-                {contexto.sucursales.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre}</option>
-                ))}
-              </select>
-            </form>
-          )}
-        </div>
-      </div>
-
       {/* ── MAIN CONTENT ─────────────────────────────────────────────────── */}
       <div style={{ padding: "24px 24px", display: "flex", flexDirection: "column", gap: 24, flex: 1 }}>
 
         {/* ── SALUDO (siempre visible, no es widget) ─────────────────────── */}
-        <div>
-          <div style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 6 }}>
-            {fechaLabel}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 6 }}>
+              {fechaLabel}
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 700, color: INK, letterSpacing: "-0.02em" }}>
+              {saludo}, {nombreDisplay}
+            </div>
+            <div style={{ fontSize: 13.5, color: "rgba(10,10,10,0.70)", marginTop: 4, lineHeight: 1.5, maxWidth: 560 }}>
+              {sinDatos
+                ? "No hay registros financieros para este período."
+                : `Resumen financiero de ${periodoLabel}. Los paneles muestran la información actualizada de tus cuentas.`}
+            </div>
           </div>
-          <div style={{ fontSize: 26, fontWeight: 700, color: INK, letterSpacing: "-0.02em" }}>
-            {saludo}, {nombreDisplay}
-          </div>
-          <div style={{ fontSize: 13.5, color: "rgba(10,10,10,0.70)", marginTop: 4, lineHeight: 1.5, maxWidth: 560 }}>
-            {sinDatos
-              ? "No hay registros financieros para este período."
-              : `Resumen financiero de ${periodoLabel}. Los paneles muestran la información actualizada de tus cuentas.`}
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, paddingTop: 4 }}>
+            <ActualizarDatosButton />
+
+            {contexto.sucursales.length > 1 && (
+              <form
+                action={async (fd) => {
+                  "use server";
+                  await setSucursalActiva(String(fd.get("sucursal_id") ?? ""));
+                }}
+              >
+                <select
+                  name="sucursal_id"
+                  defaultValue={contexto.sucursalActiva?.id}
+                  style={{
+                    border: `1px solid ${INK15}`, borderRadius: 7,
+                    padding: "5px 10px", fontSize: 12, color: INK,
+                    background: "white", fontFamily: "var(--font-sans)",
+                    outline: "none", cursor: "pointer",
+                  }}
+                >
+                  {contexto.sucursales.map((s) => (
+                    <option key={s.id} value={s.id}>{s.nombre}</option>
+                  ))}
+                </select>
+              </form>
+            )}
           </div>
         </div>
 
@@ -265,43 +168,52 @@ export default async function DashboardPage({
                     Comparativa mensual
                   </span>
                   <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)" }}>
-                    ventas diarias · últimos 3 meses
+                    ventas diarias · últimos 2 meses
                   </span>
                 </div>
                 <Ventas3MesesBars puntos={comparativa3m.puntos} meses={comparativa3m.meses} />
               </div>
             ),
 
-            "indicadores-mes": sinDatos ? (
-              <div className="terry-card" style={{ padding: "48px 24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: INK }}>Sin datos para este período</p>
-                <p style={{ fontSize: 12, color: INK50, marginTop: 4 }}>No hay registros en <span style={{ textTransform: "capitalize" }}>{periodoLabel}</span>.</p>
-                <Link href="/dashboard/seed" style={{ marginTop: 20, display: "inline-block", padding: "8px 16px", borderRadius: 7, background: INK, color: "white", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
-                  Cargar datos de prueba
-                </Link>
-              </div>
-            ) : (
+            "acumulado-2m": (
               <div>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
-                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>Indicadores del mes</span>
-                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)" }}>{resumen!.totalRegistros} registros · actualizado</span>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>
+                    Acumulado del mes
+                  </span>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)" }}>
+                    comparativa últimos 2 meses
+                  </span>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-                  {[
-                    { label: "Ingresos del mes", value: formatCLP(resumen!.ingresos), tone: "green", sub: "vs. mes anterior" },
-                    { label: "Egresos del mes",  value: formatCLP(resumen!.egresos),  tone: "red",   sub: "incluyendo sueldos" },
-                    { label: "Flujo neto",        value: formatCLP(resumen!.balance),  tone: resumen!.balance >= 0 ? "green" : "red", sub: "ingresos − egresos" },
-                    { label: "Margen neto",       value: margen, tone: resumen!.balance >= 0 ? "green" : "red", sub: `${resumen!.pendientes} pendientes de pago` },
-                  ].map((kpi, i) => (
-                    <div key={i} className="terry-card" style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 6 }}>
-                      <div style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 500 }}>{kpi.label}</div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 28, fontWeight: 600, color: INK, letterSpacing: "-0.02em", lineHeight: 1.05 }}>
-                        {kpi.value.startsWith("$") ? <><span style={{ fontSize: 16, color: INK50, marginRight: 2 }}>$</span>{kpi.value.slice(1)}</> : kpi.value}
-                      </div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: INK50 }}>{kpi.sub}</div>
-                    </div>
-                  ))}
+                <AcumuladoMeses puntos={comparativa3m.puntos} meses={comparativa3m.meses} />
+              </div>
+            ),
+
+            "ventas-hora": (
+              <div>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>
+                    Ventas por hora
+                  </span>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", textTransform: "capitalize" }}>
+                    {periodoLabel}
+                  </span>
                 </div>
+                <VentasHora data={ventasHora} />
+              </div>
+            ),
+
+            "heatmap-hora-dia": (
+              <div>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>
+                    Actividad por hora y día
+                  </span>
+                  <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", textTransform: "capitalize" }}>
+                    {periodoLabel}
+                  </span>
+                </div>
+                <HeatmapHoraDia data={ventasHeatmap} anio={anio} mes={mes} />
               </div>
             ),
 
@@ -311,17 +223,10 @@ export default async function DashboardPage({
                   <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 500 }}>Análisis financiero</span>
                   <span style={{ fontSize: 11, color: INK50, fontFamily: "var(--font-mono)", textTransform: "capitalize" }}>{periodoLabel}</span>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 14 }}>
-                  <div style={{ height: 280 }}>
-                    <TerryPanel title="Flujo de caja" subtitle="últimos 6 meses · CLP" tag="FLUJO" tagTone="ink">
-                      <FlujoLineasChartWrapper data={comparativa} />
-                    </TerryPanel>
-                  </div>
-                  <div style={{ height: 280 }}>
-                    <TerryPanel title="Composición de egresos" subtitle={periodoLabel} tag="SPLIT" tagTone="ink">
-                      <DistribucionChartWrapper data={distribucion} />
-                    </TerryPanel>
-                  </div>
+                <div style={{ height: 280 }}>
+                  <TerryPanel title="Composición de egresos" subtitle={periodoLabel} tag="SPLIT" tagTone="ink">
+                    <DistribucionChartWrapper data={distribucion} />
+                  </TerryPanel>
                 </div>
               </div>
             ),

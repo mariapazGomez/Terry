@@ -39,6 +39,35 @@ async function refreshAccessToken(refreshToken: string): Promise<{
   }
 }
 
+export async function forceRefreshSumupToken(): Promise<string> {
+  const supabase = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from("sumup_tokens")
+    .select("refresh_token")
+    .eq("organizacion_id", ORG_ID)
+    .single()
+
+  if (error || !data) throw new Error("No hay token SumUp para refrescar.")
+
+  console.log("[sumup/tokens] Force-refresh por 401...")
+  const nuevo = await refreshAccessToken(data.refresh_token)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any)
+    .from("sumup_tokens")
+    .update({
+      access_token:  nuevo.access_token,
+      refresh_token: nuevo.refresh_token,
+      expires_at:    nuevo.expires_at,
+      updated_at:    new Date().toISOString(),
+    })
+    .eq("organizacion_id", ORG_ID)
+
+  return nuevo.access_token
+}
+
 export async function getValidSumupToken(): Promise<string> {
   const supabase = createServiceClient()
 

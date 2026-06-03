@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service-client";
 import { waitlistSchema } from "./schema";
 
 export type WaitlistResult = { ok: true } | { ok: false; error: string };
@@ -24,7 +24,7 @@ export async function unirseWaitlist(formData: FormData): Promise<WaitlistResult
     return { ok: false, error: firstError };
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { error } = await supabase.from("waitlist_leads").insert(parsed.data);
 
   if (error) {

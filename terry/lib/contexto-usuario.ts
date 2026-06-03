@@ -11,6 +11,8 @@ type SucursalVisible = {
 type ContextoUsuario = {
   user: User;
   organizacionId: string;
+  orgNombre: string;
+  onboardingCompletado: boolean;
   rol: "admin" | "lector";
   sucursales: SucursalVisible[];
   sucursalActiva: SucursalVisible | null;
@@ -38,6 +40,13 @@ export const getContextoUsuario = cache(async (): Promise<ContextoUsuario> => {
   if (errorOrg || !miembroOrg) {
     throw new Error("Usuario sin organizacion asignada");
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: org } = await (supabase as any)
+    .from("organizaciones")
+    .select("nombre, onboarding_completado")
+    .eq("id", miembroOrg.organizacion_id)
+    .single();
 
   // 3. obtener sucursales visibles
   let sucursales: SucursalVisible[] = [];
@@ -82,6 +91,8 @@ export const getContextoUsuario = cache(async (): Promise<ContextoUsuario> => {
   return {
     user,
     organizacionId: miembroOrg.organizacion_id,
+    orgNombre: org?.nombre ?? "",
+    onboardingCompletado: org?.onboarding_completado ?? false,
     rol: miembroOrg.rol as "admin" | "lector",
     sucursales,
     sucursalActiva,

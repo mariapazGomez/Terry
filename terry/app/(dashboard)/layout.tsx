@@ -9,6 +9,7 @@ import AppSidebar from "@/components/layout/app-sidebar";
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const contexto = await getContextoUsuario().catch(() => null);
   if (!contexto) redirect("/login");
+  if (!contexto.onboardingCompletado) redirect("/onboarding");
 
   const { user } = contexto;
 

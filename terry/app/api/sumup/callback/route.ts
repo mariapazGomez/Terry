@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import { guardarTokens } from "@/lib/sumup/tokens"
+import { createServiceClient } from "@/lib/supabase/service-client"
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code")
@@ -31,5 +32,15 @@ export async function GET(request: NextRequest) {
   await guardarTokens(access_token, refresh_token, expires_in)
   console.log("[sumup/callback] Tokens guardados en Supabase")
 
-  return Response.redirect(new URL("/dashboard/ventas", request.url))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createServiceClient() as any
+  const orgId = process.env.TELEGRAM_ORG_ID!
+  const { data: org } = await supabase
+    .from("organizaciones")
+    .select("onboarding_completado")
+    .eq("id", orgId)
+    .maybeSingle()
+
+  const returnPath = org?.onboarding_completado === false ? "/onboarding" : "/dashboard/ventas"
+  return Response.redirect(new URL(returnPath, request.url))
 }

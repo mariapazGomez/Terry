@@ -28,6 +28,7 @@ export async function unirseWaitlist(formData: FormData): Promise<WaitlistResult
   const { error } = await supabase.from("waitlist_leads").insert(parsed.data);
 
   if (error) {
+    console.error("[waitlist] Supabase error:", error.code, error.message);
     if (error.code === "23505") {
       return { ok: false, error: "Este email ya está en la lista de espera." };
     }
